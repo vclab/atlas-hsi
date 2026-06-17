@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlas-hsi"
+version = "0.1.0"
+description = "ATLAS — Adaptive Transfer of Low-rank Abundance Splatting: hyperspectral image compression via low-rank spectral Gaussian splatting."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jacob Rempel" }]
+keywords = ["hyperspectral", "compression", "gaussian-splatting", "low-rank", "remote-sensing"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+]
+
+# Core runtime deps. NOTE: the CUDA rasterization kernel ships as a SEPARATE
+# distribution (`atlas-gsplat`, a fork of nerfstudio gsplat with 2D splatting
+# functions). It is not yet on PyPI, so install it separately, e.g.:
+#   pip install "git+https://github.com/<org>/atlas-gsplat"
+# It is intentionally omitted here so `pip install atlas-hsi` does not fail on
+# machines without a CUDA toolchain (e.g. for data-only / inspection use).
+dependencies = [
+    "torch",
+    "numpy",
+    "scipy",
+    "constriction",
+    "pytorch-msssim",
+    "tqdm",
+    "scikit-learn",   # NMF endmember initialization
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib"]
+demo = ["streamlit>=1.32", "streamlit-image-coordinates"]
+dev = ["pytest", "ruff", "build"]
+
+[project.scripts]
+atlas = "atlas.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jacobh3ll0/atlas-hsi"
+Repository = "https://github.com/jacobh3ll0/atlas-hsi"
+Issues = "https://github.com/jacobh3ll0/atlas-hsi/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+# "atlas*" would also match the sibling atlas-gsplat/ dir (the separately-distributed
+# CUDA kernel) and bundle its sources into this wheel. Match only the atlas package
+# and its subpackages.
+include = ["atlas", "atlas.*"]
+exclude = ["atlas-gsplat*", "tests*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+# Lint scope is the package surface (atlas/ + tests/ + examples/). The research
+# workspace dirs and the separately-distributed CUDA kernel are not linted here.
+# The four atlas/ entries are faithful ports of the LoR-SGS numeric core, kept
+# verbatim for reproducibility (they predate this package's style).
+extend-exclude = [
+    "atlas/model.py", "atlas/quantize.py", "atlas/utils.py", "atlas/optimizer.py", "atlas/train.py",
+    "src", "baselines", "archive", "experiments", "demo", "scripts",
+    "GaussianImage_plus", "paper", "paper_figures", "references", "webpage",
+    "atlas-gsplat", "newvenv",
+]
+
+[tool.ruff.lint]
+# E/F (pyflakes+pycodestyle), I (import sort), UP (pyupgrade), B (bugbear).
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["F403", "F405", "E741"]

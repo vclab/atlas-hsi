@@ -1,0 +1,61 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- Virtual environments ---
+newvenv/
+venv/
+.venv/
+env/
+
+# --- Datasets & large binaries (regenerated / downloaded, not versioned) ---
+data/raw/
+data/init/
+checkpoints/
+*.mat
+*.npy
+*.pth
+*.ckpt
+
+# Keep the committed quickstart fixture (overrides *.npy above).
+!examples/tiny_cube.npy
+
+# --- Training / run outputs ---
+atlas_runs/
+examples/init/
+examples/atlas_runs/
+
+# --- Demo runtime cache ---
+demo/cache/
+
+# --- OS / editor cruft ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Not part of the atlas-hsi package ---
+# Research workspace dirs, the separately-distributed kernel, and large/copyrighted assets.
+# (docs/ is intentionally left untracked rather than ignored, so it's easy to add later.)
+/src/
+/baselines/
+/demo/
+/experiments/
+/archive/
+/scripts/
+/paper/
+/paper_figures/
+/webpage/
+/references/
+/GaussianImage_plus/
+/data/
+/atlas-gsplat/
+/CLAUDE.md
+*.pdf
