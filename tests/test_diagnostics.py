@@ -94,6 +94,37 @@ def test_overall_ok():
     assert dx.overall_ok(not_ready) is False
 
 
+def test_kernel_prebuilt_returns_bool():
+    assert isinstance(dx.kernel_prebuilt(), bool)
+
+
+def test_overall_ok_prebuilt_kernel_overrides_build_mismatch():
+    # A prebuilt extension runs even when torch and the toolkit disagree on CUDA major.
+    base = {
+        "torch": {"installed": True, "cuda_available": True},
+        "gsplat_installed": True,
+        "match_level": "error",
+    }
+    assert dx.overall_ok(base) is False                       # no prebuilt kernel → must build
+    assert dx.overall_ok(dict(base, kernel_prebuilt=True)) is True
+    # but a prebuilt kernel cannot save a missing GPU / torch
+    assert dx.overall_ok(dict(base, kernel_prebuilt=True, gsplat_installed=False)) is False
+
+
+def test_format_report_prebuilt_demotes_mismatch_to_ready():
+    report = {
+        "python": "3.11.0", "platform": "Linux-test",
+        "torch": {"installed": True, "version": "2.11.0+cu130", "built_cuda": "13.0",
+                  "cuda_available": True, "device": "RTX 3080"},
+        "nvcc": "/usr/local/cuda-12.8/bin/nvcc", "toolkit_version": "12.8",
+        "gsplat_installed": True, "kernel_prebuilt": True,
+        "match_level": "error", "match_message": "CUDA major mismatch: ...",
+    }
+    text = dx.format_report(report)
+    assert "READY" in text and "NOT READY" not in text
+    assert "prebuilt" in text
+
+
 def test_format_report_smoke():
     report = {
         "python": "3.11.0",

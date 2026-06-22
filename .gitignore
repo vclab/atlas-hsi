@@ -43,7 +43,9 @@ demo/cache/
 
 # --- Not part of the atlas-hsi package ---
 # Research workspace dirs, the separately-distributed kernel, and large/copyrighted assets.
-# (docs/ is intentionally left untracked rather than ignored, so it's easy to add later.)
+# (docs/ is intentionally left untracked rather than ignored, so it's easy to add later;
+#  docs/findings/ holds local-only research notes and is ignored.)
+/docs/findings/
 /src/
 /baselines/
 /demo/

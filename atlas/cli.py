@@ -42,6 +42,9 @@ def _add_train_args(p):
     # Advanced (quantization bit-widths; only matter once QAT is enabled).
     p.add_argument("--abundance_bits", type=int, default=6, help="[advanced] abundance LSQ+ bits")
     p.add_argument("--cholesky_bits", type=int, default=10, help="[advanced] cholesky LSQ+ bits")
+    p.add_argument("--lsq-grad-scale", dest="lsq_grad_scale", action="store_true",
+                   help="[experimental] enable LSQ+ gradient scaling for the quantizer "
+                        "scale/offset params (default off = validated behavior)")
 
 
 def cmd_train(args):
@@ -78,12 +81,11 @@ def cmd_train(args):
         gt, endmember=endmember, image_name=key, iterations=args.iterations,
         num_points=args.num_points, max_num_points=max_num_points,
         grow_interval=1000, grow_stop_iter=grow_stop_iter,
-        caf=False,            # CAF does not transfer to HSI — hard off
-        qat_start=args.qat_start, qat_ramp_iters=0,  # progressive QAT dropped
+        qat_start=args.qat_start,
         prune_interval=args.prune_interval, endmember_lr=args.endmember_lr,
         sam_weight=args.sam_weight, A0=A0,
         abundance_bits=args.abundance_bits, cholesky_bits=args.cholesky_bits,
-        delta_coding=False,   # spatial delta coding dropped
+        lsq_grad_scale=args.lsq_grad_scale,
         output_dir=args.output_dir,
     )
 
@@ -103,6 +105,25 @@ def cmd_init(args):
     key = data.init_key(args.input)
     rank = args.rank if args.rank is not None else data.rank_for(key)
     nmf_initialization(I, rank, key, init_dir=args.init_dir)
+
+
+def cmd_decompress(args):
+    import numpy as np
+
+    from . import codec
+
+    meta, arrays = codec.read_bitstream(args.input)
+    bpppb = codec.payload_bpppb(meta, arrays)
+    cube = codec.reconstruct(meta, arrays)  # (H, W, C); needs CUDA
+    np.save(args.output, cube)
+    print(f"Decompressed {args.input} -> {args.output}  "
+          f"shape={tuple(cube.shape)}  payload bpppb={bpppb:.4f}")
+    if args.reference:
+        ref = data.load_cube(args.reference, data_dir=args.data_dir)
+        ref = np.clip(ref, 0, 1).astype(np.float32)
+        mse = ((ref - cube) ** 2).mean(axis=(0, 1))  # per-band MSE
+        mpsnr = float(np.mean(10 * np.log10(1.0 / np.maximum(mse, 1e-12))))
+        print(f"Reference {args.reference}: mean per-band PSNR = {mpsnr:.4f} dB")
 
 
 def main(argv=None):
@@ -129,6 +150,15 @@ def main(argv=None):
         "--build", action="store_true",
         help="Also force-build/load the atlas-gsplat CUDA kernel (slow; needs a GPU)")
     p_doctor.set_defaults(func=cmd_doctor)
+
+    p_dec = sub.add_parser(
+        "decompress", help="Reconstruct a cube from an ATLAS bitstream (.atlas)")
+    p_dec.add_argument("input", help="Path to a .atlas bitstream file")
+    p_dec.add_argument("-o", "--output", required=True, help="Output cube .npy path")
+    p_dec.add_argument("--reference", default=None,
+                       help="Optional original cube (name or path) to report reconstruction PSNR")
+    p_dec.add_argument("--data-dir", type=str, default=data.DEFAULT_DATA_DIR)
+    p_dec.set_defaults(func=cmd_decompress)
 
     args = parser.parse_args(argv)
     args.func(args)

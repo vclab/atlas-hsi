@@ -25,6 +25,7 @@ __all__ = [
     "rank_for",
     "train_nd",
     "GaussianImage_Cholesky_EA",
+    "codec",
     "viz",
 ]
 
@@ -37,7 +38,7 @@ def __getattr__(name):
     if name == "GaussianImage_Cholesky_EA":
         from .model import GaussianImage_Cholesky_EA
         return GaussianImage_Cholesky_EA
-    if name == "viz":
+    if name in ("codec", "viz"):
         import importlib
-        return importlib.import_module(".viz", __name__)
+        return importlib.import_module("." + name, __name__)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
