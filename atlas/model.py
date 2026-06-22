@@ -1,6 +1,6 @@
 try:
     from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
-    from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum, rasterize_gaussians_sum_general
+    from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum_general
 except ImportError as _kernel_import_error:
     raise ImportError(
         "ATLAS needs the CUDA kernel package `atlas-gsplat`, which is not installed.\n"
@@ -39,11 +39,11 @@ _require_atlas_gsplat_kernel()
 from .utils import *
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import math
 from .quantize import *
 from .optimizer import Adan
-from torch.utils.data import DataLoader, Dataset
 
 
 class GaussianImage_Cholesky_EA(nn.Module):
@@ -56,8 +56,6 @@ class GaussianImage_Cholesky_EA(nn.Module):
         self.grow_stop_iter = kwargs.get("grow_stop_iter", 5000)
         self.d3_enabled = self.max_num_points > self.init_num_points
         self.prune_interval = kwargs.get("prune_interval", 100)
-        self.caf = kwargs.get("caf", True)
-        self.delta_coding = kwargs.get("delta_coding", False)
         self.qat_enabled = False  # Toggled at QAT transition
         self.H, self.W, self.rank, self.C = kwargs["H"], kwargs["W"], kwargs["rank"], kwargs["C"]
         self.BLOCK_W, self.BLOCK_H = kwargs["BLOCK_W"], kwargs["BLOCK_H"]
@@ -65,13 +63,10 @@ class GaussianImage_Cholesky_EA(nn.Module):
             (self.W + self.BLOCK_W - 1) // self.BLOCK_W,
             (self.H + self.BLOCK_H - 1) // self.BLOCK_H,
             1,
-        ) 
-        #torch.seed(1234)
-        torch.cuda.synchronize()
-        gpu_memory = torch.cuda.memory_allocated() / (1024 ** 2) # MB
+        )
         self.device = kwargs["device"]
-        self.image = kwargs["GT"]#.to(torch.float32) # (1, C, H, W)
-        
+        self.image = kwargs["GT"]  # (1, C, H, W)
+
         self.endmember_lr = kwargs.get("endmember_lr", 0)
         self.sam_weight = kwargs.get("sam_weight", 0.0)
         E_tensor = torch.tensor(kwargs["E"]).to(self.device)
@@ -83,10 +78,6 @@ class GaussianImage_Cholesky_EA(nn.Module):
             self._endmember_raw = nn.Parameter(raw)
         else:
             self.endmember = nn.Parameter(E_tensor, requires_grad=False)
-        
-        torch.cuda.synchronize()
-        E_gpu_memory = torch.cuda.memory_allocated() / (1024 ** 2) # MB
-        print(f"E0 GPU memory usage: {E_gpu_memory - gpu_memory} MB")
 
         A0 = kwargs.get("A0", None)
         if A0 is not None:
@@ -97,26 +88,16 @@ class GaussianImage_Cholesky_EA(nn.Module):
         self._cholesky = nn.Parameter(torch.zeros(self.init_num_points, 3))
         self.register_buffer('_opacity', torch.ones((self.init_num_points, 1)))
         self.coef = nn.Parameter(torch.tensor(0.0))
+        self.register_buffer('cholesky_bound', torch.tensor([0.5, 0, 0.5]).view(1, 3))
 
-        self.last_size = (self.H, self.W)
-        self.quantize = kwargs["quantize"]
-        self.register_buffer('background', torch.ones(self.rank))
-        self.opacity_activation = torch.sigmoid
-        self.rgb_activation = torch.sigmoid
-        self.register_buffer('bound', torch.tensor([0.5, 0.5]).view(1, 2))
-        if self.caf:
-            low_pass = min(self.H * self.W / (9 * math.pi * self.init_num_points), 300)
-            self.register_buffer('cholesky_bound',
-                torch.tensor([low_pass, 0, low_pass]).view(1, 3).repeat(self.init_num_points, 1))
-        else:
-            self.register_buffer('cholesky_bound', torch.tensor([0.5, 0, 0.5]).view(1, 3))
-        
         self.abundance_bits = kwargs.get("abundance_bits", 6)
         self.cholesky_bits = kwargs.get("cholesky_bits", 10)
-        self.endmember_quantizer = FakeQuantizationHalf.apply
-        self.xyz_quantizer = FakeQuantizationHalf.apply  # FP16: position quantization hurts HSI quality
-        self.features_dc_quantizer = UniformQuantizer(signed=False, bits=self.abundance_bits, learned=True, num_channels=self.rank)
-        self.cholesky_quantizer = UniformQuantizer(signed=True, bits=self.cholesky_bits, learned=True, num_channels=3)
+        # Positions and the endmember stay FP16 (FakeQuantizationHalf, applied inline in the
+        # forward pass) — LSQ+ position quantization hurts HSI quality. Abundances and the
+        # cholesky covariance use learned LSQ+ quantizers.
+        lsq_grad_scale = kwargs.get("lsq_grad_scale", False)
+        self.features_dc_quantizer = UniformQuantizer(signed=False, bits=self.abundance_bits, learned=True, num_channels=self.rank, use_grad_scale=lsq_grad_scale)
+        self.cholesky_quantizer = UniformQuantizer(signed=True, bits=self.cholesky_bits, learned=True, num_channels=3, use_grad_scale=lsq_grad_scale)
 
         if kwargs["opt_type"] == "adam":
             self.optimizer = torch.optim.Adam(self._gaussian_params(), lr=kwargs["lr"])
@@ -173,20 +154,10 @@ class GaussianImage_Cholesky_EA(nn.Module):
         features = nn.Parameter(A0_t[indices])
         return xyz, features
 
-    def _init_data(self):
-        self.cholesky_quantizer._init_data(self._cholesky)
-        self.features_dc_quantizer._init_data(self._features_dc)
-
-    def enable_quantization(self, qat_ramp_iters=0):
-        """Enable real quantization (QAT stage). Call _init_data to set scale/beta from current params.
-
-        Args:
-            qat_ramp_iters: If > 0, progressively tighten quantization over this many iters.
-                           Scale starts at 2x (coarser) and linearly decays to 1x (target).
-        """
+    def enable_quantization(self):
+        """Enable real (LSQ+) quantization for the QAT stage, initializing each
+        quantizer's scale/beta from the current parameter ranges."""
         self.qat_enabled = True
-        self.qat_ramp_iters = qat_ramp_iters
-        self.qat_ramp_step = 0
         self.cholesky_quantizer._init_data(self._cholesky)
         self.features_dc_quantizer._init_data(self._features_dc)
 
@@ -220,8 +191,6 @@ class GaussianImage_Cholesky_EA(nn.Module):
         self._cholesky = nn.Parameter(self._cholesky.data[keep_mask])
         self._features_dc = nn.Parameter(self._features_dc.data[keep_mask])
         self._opacity = self._opacity[keep_mask]
-        if self.caf:
-            self.cholesky_bound = self.cholesky_bound[keep_mask]
 
         # Rebuild optimizer with pruned params (exclude endmember)
         lr = old_param_groups[0]['lr']
@@ -273,90 +242,15 @@ class GaussianImage_Cholesky_EA(nn.Module):
     def get_cholesky_elements(self):
         return self._cholesky+self.cholesky_bound
 
-    def forward(self):
-        self.xys, depths, self.radii, conics, num_tiles_hit = project_gaussians_2d(self.get_xyz, self.get_cholesky_elements, self.H, self.W, self.tile_bounds)
-
-        # UNIFIED KERNEL: Process all spectral channels in one pass
-        out_img = rasterize_gaussians_sum_general(
-            self.xys, depths, self.radii, conics, num_tiles_hit,
-            self.get_features, self._opacity, self.H, self.W, self.BLOCK_H, self.BLOCK_W, return_alpha=False
-        )
-
-        out_img = torch.clamp(out_img, 0, 1) #(H, W, rank)
-        out_img = out_img.view(self.H * self.W, self.rank).contiguous() #(H * W, rank)
-        return {"render": out_img}
-
-    def train_iter(self):
-        render_pkg = self.forward()
-        A = render_pkg["render"] # (H * W, rank)
-        flatimage = (A @ self.endmember_activated) # image: (H * W, C)
-        #image_cube = flatimage.view(self.H, self.W, self.C)
-        image = flatimage.view(-1, self.H, self.W, self.C).permute(0, 3, 1, 2).contiguous() #[1, C, H, W]
-        
-        # update abundance
-        loss =   loss_fn(image, self.image, self.loss_type, lambda_value=0.7) 
-        loss.backward()
-        '''0.15 * loss_fn(A, self.abundance) + 0.85 *0.05 * loss_fn(A, self.abundance) + 0.95 *
-        # update endmember: multiplication rule
-        with torch.no_grad():
-            A_new = self.forward()["render"]
-            image_new = (A_new @ self.endmember)
-            self.endmember *=  (A_new.T @ self.image.view(-1, self.C)) / (A_new.T @ image_new)
-        '''
-        with torch.no_grad():
-            I = (A @ self.endmember * self.coef_endmember).view(-1, self.H, self.W, self.C).permute(0, 3, 1, 2).contiguous()
-            mse_loss = F.mse_loss(I, self.image)
-            psnr = 10 * math.log10(1.0 / mse_loss.item())
-            
-        self.optimizer.step()
-        self.optimizer.zero_grad(set_to_none = True)
-        self.scheduler.step()
-        return loss, psnr
-    
-    def _compute_sort_order(self, means):
-        """Compute Morton Z-order sort for spatial delta coding."""
-        if not self.delta_coding or self.training:
-            return None
-        # Morton order: interleave bits of quantized x,y coordinates
-        xy = means.detach().cpu().numpy()  # [N, 2], range [-1, 1]
-        # Quantize to 16-bit grid
-        qx = ((xy[:, 0] + 1) * 32767.5).astype(np.uint32)
-        qy = ((xy[:, 1] + 1) * 32767.5).astype(np.uint32)
-        # Simple Morton code: interleave bits (use multiplication trick for speed)
-        morton = np.zeros(len(qx), dtype=np.uint64)
-        for bit in range(16):
-            morton |= ((qx >> bit) & 1).astype(np.uint64) << (2 * bit)
-            morton |= ((qy >> bit) & 1).astype(np.uint64) << (2 * bit + 1)
-        return np.argsort(morton)
-
     def forward_quantize(self):
-        # quantize plan1: "GaussianImage"
         N = self._xyz.shape[0]
         l_vqm, m_bit = 0, 16*N*2
         means = torch.tanh(FakeQuantizationHalf.apply(self._xyz))
 
-        # Compute spatial sort order for delta coding (eval-time only)
-        sort_order = self._compute_sort_order(means)
-
         # Quantization controlled by qat_enabled flag (set via enable_quantization())
         if self.qat_enabled:
-            # Progressive quantization: temporarily widen scale during ramp
-            if self.qat_ramp_iters > 0 and self.qat_ramp_step < self.qat_ramp_iters and self.training:
-                progress = self.qat_ramp_step / self.qat_ramp_iters
-                scale_mult = 2.0 - progress  # 2.0 -> 1.0
-                self.qat_ramp_step += 1
-                # Temporarily scale up (coarser quant), then restore
-                with torch.no_grad():
-                    self.cholesky_quantizer.scale.data *= scale_mult
-                    self.features_dc_quantizer.scale.data *= scale_mult
-                cholesky_elements, l_vqs, s_bit = self.cholesky_quantizer(self._cholesky)
-                features, l_vqc, c_bit = self.features_dc_quantizer(self.get_features)
-                with torch.no_grad():
-                    self.cholesky_quantizer.scale.data /= scale_mult
-                    self.features_dc_quantizer.scale.data /= scale_mult
-            else:
-                cholesky_elements, l_vqs, s_bit = self.cholesky_quantizer(self._cholesky, sort_order=sort_order)
-                features, l_vqc, c_bit = self.features_dc_quantizer(self.get_features, sort_order=sort_order)
+            cholesky_elements, l_vqs, s_bit = self.cholesky_quantizer(self._cholesky)
+            features, l_vqc, c_bit = self.features_dc_quantizer(self.get_features)
         else:
             cholesky_elements, l_vqs, s_bit = self._cholesky, 0, 32*N*3
             features, l_vqc, c_bit = self.get_features, 0, 32*N*self.rank
@@ -390,7 +284,6 @@ class GaussianImage_Cholesky_EA(nn.Module):
         if self.sam_weight > 0:
             loss = loss + self.sam_weight * sam_loss_fn(image, self.image)
         loss.backward()
-        #0.05 * loss_fn(A, self.abundance) + 0.95 *
         with torch.no_grad():
             I = (A @ self.endmember_activated).view(-1, self.H, self.W, self.C).permute(0, 3, 1, 2).contiguous()
             mse_per_channel = F.mse_loss(I, self.image, reduction='none')
@@ -476,12 +369,6 @@ class GaussianImage_Cholesky_EA(nn.Module):
         # Extend opacity buffer
         new_opacity = torch.ones((num_new, 1), device=self.device)
         self._opacity = torch.cat([self._opacity, new_opacity], dim=0)
-
-        if self.caf:
-            new_n = self._xyz.shape[0]
-            new_low_pass = min(self.H * self.W / (9 * math.pi * new_n), 300)
-            new_bound = torch.tensor([new_low_pass, 0, new_low_pass], device=self.device).view(1, 3).repeat(num_new, 1)
-            self.cholesky_bound = torch.cat([self.cholesky_bound, new_bound], dim=0)
 
         return old_num
 

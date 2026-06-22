@@ -34,16 +34,14 @@ class SimpleTrainerHSI:
         max_num_points: int = None,
         grow_interval: int = 1000,
         grow_stop_iter: int = 5000,
-        caf: bool = True,
         qat_start: int = 0,
-        qat_ramp_iters: int = 0,
         prune_interval: int = 100,
         endmember_lr: float = 0,
         sam_weight: float = 0.0,
         A0=None,
         abundance_bits: int = 6,
         cholesky_bits: int = 10,
-        delta_coding: bool = False,
+        lsq_grad_scale: bool = False,
         model_name: str = "GaussianImage_Cholesky_nd",
         iterations: int = 50000,
         model_path=None,
@@ -64,7 +62,6 @@ class SimpleTrainerHSI:
 
         self.iterations = iterations
         self.qat_start = qat_start
-        self.qat_ramp_iters = qat_ramp_iters
         self.log_dir = Path(output_dir) / f"{data_name}/{model_name}_{iterations}_{num_points}_{self.rank}/{image_name}"
         os.makedirs(self.log_dir, exist_ok=True)
         self.image_name = image_name
@@ -79,13 +76,13 @@ class SimpleTrainerHSI:
                 loss_type="L2", opt_type="adan", num_points=self.num_points,
                 GT=self.gt_image, E=self.endmember, H=self.H, W=self.W, C=self.C,
                 rank=self.rank, BLOCK_H=BLOCK_H, BLOCK_W=BLOCK_W,
-                device=self.device, lr=5e-3, quantize=False,
+                device=self.device, lr=5e-3,
                 max_num_points=max_num_points if max_num_points is not None else self.num_points,
-                grow_interval=grow_interval, grow_stop_iter=grow_stop_iter, caf=caf,
+                grow_interval=grow_interval, grow_stop_iter=grow_stop_iter,
                 prune_interval=prune_interval, endmember_lr=endmember_lr,
                 sam_weight=sam_weight, A0=A0,
                 abundance_bits=abundance_bits, cholesky_bits=cholesky_bits,
-                delta_coding=delta_coding).to(self.device)
+                lsq_grad_scale=lsq_grad_scale).to(self.device)
 
         torch.cuda.synchronize()
         model_gpu_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # MB
@@ -107,14 +104,15 @@ class SimpleTrainerHSI:
         self.gaussian_model.train()
         start_time = time.time()
         best_psnr = 0
-
         best_num_points = self.gaussian_model._xyz.shape[0]
+        # Always bound, even if QAT starts on iter 1 or no iter beats the initial PSNR.
+        best_model_dict = copy.deepcopy(self.gaussian_model.state_dict())
         for iter in range(1, self.iterations + 1):
             # QAT transition
             if self.qat_start > 0 and iter == self.qat_start:
                 print(f"\n[QAT] Transition at iter {iter}: loading best warmup model (PSNR {best_psnr:.2f})")
                 self.gaussian_model.load_state_dict(best_model_dict)
-                self.gaussian_model.enable_quantization(qat_ramp_iters=self.qat_ramp_iters)
+                self.gaussian_model.enable_quantization()
                 lr = self.gaussian_model.scheduler.get_last_lr()[0]
                 self.gaussian_model.optimizer = Adan(self.gaussian_model._gaussian_params(), lr=lr)
                 self.gaussian_model.scheduler = torch.optim.lr_scheduler.StepLR(
@@ -155,11 +153,20 @@ class SimpleTrainerHSI:
             self.gaussian_model._cholesky = nn.Parameter(torch.zeros(best_N, 3, device=device))
             self.gaussian_model._features_dc = nn.Parameter(torch.zeros(best_N, self.gaussian_model.rank, device=device))
             self.gaussian_model._opacity = torch.ones(best_N, 1, device=device)
-            if self.gaussian_model.caf:
-                self.gaussian_model.cholesky_bound = torch.zeros(best_N, 3, device=device)
+            # cholesky_bound is a fixed (1, 3) buffer (broadcasts over N) — no resize needed.
         self.gaussian_model.load_state_dict(best_model_dict)
         best_psnr_value, best_ms_ssim_value, best_sam, best_bpppb = self.test(True)
         torch.save(best_model_dict, self.log_dir / "gaussian_model.best.pth.tar")
+        # Emit the real compressed bitstream (only meaningful for a quantized model).
+        if self.gaussian_model.qat_enabled:
+            from . import codec
+            bpath = self.log_dir / "compressed.atlas"
+            nbytes = codec.write_bitstream(self.gaussian_model, bpath)
+            meta, arrays = codec.read_bitstream(bpath)
+            self.logwriter.write(
+                "Bitstream: {} ({:.1f} KiB, file bpppb {:.4f}, payload bpppb {:.4f})".format(
+                    bpath.name, nbytes / 1024, nbytes * 8 / (self.H * self.W * self.C),
+                    codec.payload_bpppb(meta, arrays)))
         with torch.no_grad():
             self.gaussian_model.eval()
             test_start_time = time.time()
@@ -212,20 +219,21 @@ class SimpleTrainerHSI:
 
 
 def train_nd(gt, endmember, image_name, iterations, num_points, max_num_points=None,
-             grow_interval=1000, grow_stop_iter=5000, caf=True, qat_start=0, qat_ramp_iters=0,
+             grow_interval=1000, grow_stop_iter=5000, qat_start=0,
              prune_interval=100, endmember_lr=0, sam_weight=0.0, A0=None,
-             abundance_bits=6, cholesky_bits=10, delta_coding=False,
+             abundance_bits=6, cholesky_bits=10, lsq_grad_scale=False,
              model_name="GaussianImage_Cholesky_nd", output_dir=DEFAULT_OUTPUT_DIR):
     """Train an ATLAS representation for a single cube and log the result."""
     logwriter = LogWriter(Path(output_dir) / f"compression/{model_name}_{iterations}_{num_points}")
     trainer = SimpleTrainerHSI(
         ground_truth=gt, endmember=endmember, num_points=num_points,
         max_num_points=max_num_points, grow_interval=grow_interval,
-        grow_stop_iter=grow_stop_iter, caf=caf, qat_start=qat_start,
-        qat_ramp_iters=qat_ramp_iters, prune_interval=prune_interval,
+        grow_stop_iter=grow_stop_iter, qat_start=qat_start,
+        prune_interval=prune_interval,
         endmember_lr=endmember_lr, sam_weight=sam_weight, A0=A0,
         abundance_bits=abundance_bits, cholesky_bits=cholesky_bits,
-        delta_coding=delta_coding, iterations=iterations, model_name=model_name,
+        lsq_grad_scale=lsq_grad_scale,
+        iterations=iterations, model_name=model_name,
         image_name=image_name, output_dir=output_dir)
     (psnr, ms_ssim_v, training_time, eval_time, eval_fps, bpppb,
      best_psnr_value, best_ms_ssim_value, best_sam, best_bpppb) = trainer.train()

@@ -144,6 +144,16 @@ def gsplat_installed() -> bool:
         return False
 
 
+def kernel_prebuilt() -> bool:
+    """Whether a prebuilt ``atlas_gsplat.csrc`` C extension is importable. A prebuilt
+    extension runs without any CUDA toolkit, so the torch/toolkit build-match is moot
+    (this mirrors the check in ``atlas.model``)."""
+    try:
+        return importlib.util.find_spec("atlas_gsplat.csrc") is not None
+    except Exception:
+        return False
+
+
 def probe_kernel_build() -> tuple[str, str]:
     """Force the atlas-gsplat CUDA extension to load (compiling it if needed).
 
@@ -175,20 +185,22 @@ def collect() -> dict:
         "nvcc": nvcc,
         "toolkit_version": toolkit_version,
         "gsplat_installed": gsplat_installed(),
+        "kernel_prebuilt": kernel_prebuilt(),
         "match_level": level,
         "match_message": message,
     }
 
 
 def overall_ok(report: dict) -> bool:
-    """True when the environment can build and run the kernel."""
+    """True when the environment can run the kernel.
+
+    A prebuilt extension runs without a toolkit; otherwise torch and the toolkit must
+    share a CUDA major version so the kernel can be built on first use.
+    """
     t = report["torch"]
-    return bool(
-        t.get("installed")
-        and t.get("cuda_available")
-        and report["gsplat_installed"]
-        and report["match_level"] == "ok"
-    )
+    if not (t.get("installed") and t.get("cuda_available") and report["gsplat_installed"]):
+        return False
+    return report.get("kernel_prebuilt", False) or report["match_level"] == "ok"
 
 
 def format_report(report: dict) -> str:
@@ -212,15 +224,23 @@ def format_report(report: dict) -> str:
                      f"CUDA_HOME / PATH / /usr/local/cuda*")
 
     if report["gsplat_installed"]:
-        lines.append(f"{_MARK['ok']} atlas-gsplat installed")
+        extra = " (prebuilt kernel present)" if report.get("kernel_prebuilt") else ""
+        lines.append(f"{_MARK['ok']} atlas-gsplat installed{extra}")
     else:
         lines.append(f"{_MARK['error']} atlas-gsplat NOT installed  "
                      f"(pip install ./atlas-gsplat on a CUDA box)")
 
-    lines += ["", f"{_MARK[report['match_level']]} {report['match_message']}", ""]
+    # A prebuilt kernel runs without the toolkit, so a build-time CUDA mismatch is not
+    # fatal — demote it to an informational note instead of a failure.
+    if report.get("kernel_prebuilt") and report["match_level"] != "ok":
+        lines += ["", f"{_MARK['info']} {report['match_message']}",
+                  f"{_MARK['ok']} a prebuilt atlas-gsplat kernel is installed, so the "
+                  f"toolkit match above only matters if you rebuild from source.", ""]
+    else:
+        lines += ["", f"{_MARK[report['match_level']]} {report['match_message']}", ""]
 
     if overall_ok(report):
-        lines.append("READY — your environment can build and run the atlas-gsplat kernel.")
+        lines.append("READY — your environment can run the atlas-gsplat kernel.")
     else:
         lines.append("NOT READY — resolve the items above, then re-run `atlas doctor`.")
 

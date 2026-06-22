@@ -81,6 +81,10 @@ atlas train --input paviau --num_points 7250 --max_num_points 14500 \
   --grow_stop_iter 2000 --iterations 10500 --qat_start 5250 \
   --prune_interval 100 --endmember_lr 1e-4 --sam_weight 0.05 \
   --cholesky_bits 8
+# A quantized (QAT) run also writes a real compressed bitstream: <logdir>/compressed.atlas
+
+# 4. Decompress a bitstream back into a cube (.npy); --reference reports reconstruction PSNR
+atlas decompress atlas_runs/HSI/.../compressed.atlas -o recon.npy --reference paviau
 ```
 
 You can also pass a path to your own cube instead of a dataset name:
@@ -147,9 +151,25 @@ Every helper returns the `(fig, ax)` so you can compose or save them; pass
 | `--rank` | per-dataset | NMF rank (10 for JasperRidge, else 12) |
 | `--output-dir` | `atlas_runs` | Where checkpoints/logs are written |
 | `--abundance_bits` / `--cholesky_bits` | 6 / 10 | *(advanced)* LSQ+ bit-widths (used under QAT) |
+| `--lsq-grad-scale` | off | *(experimental)* LSQ+ gradient scaling for the quantizer scale/offset (rate-distortion-neutral with the Adan optimizer) |
 
 Techniques the paper found do **not** transfer to HSI are not exposed: content-aware
 filters, spatial delta coding, and progressive QAT.
+
+## Compressed bitstream
+
+A QAT run writes `compressed.atlas` next to its checkpoints — the real compressed file for that
+cube (a self-describing binary container: positions and endmember as FP16, the cholesky covariance
+and abundances as LSQ+ integer codes, ANS entropy-coded). `atlas decompress` reads it back and
+reconstructs the cube via the same forward pass, so the decoded result matches the trained model:
+
+```bash
+atlas decompress run/compressed.atlas -o recon.npy --reference paviau
+```
+
+The trainer's reported `bpppb` is the entropy payload of exactly this file (the on-disk file adds a
+small fixed container header). Programmatic access: `atlas.codec.write_bitstream(model, path)` /
+`atlas.codec.decompress(path) -> cube`.
 
 ## Datasets
 
