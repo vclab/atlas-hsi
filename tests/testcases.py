@@ -116,6 +116,15 @@ _BENCHMARKS = [
                     iterations=12000, qat_start=6000, rank=12),
         psnr_min=32.0, bpppb_max=0.25,
     ),
+    Case(
+        name="whu_honghu", dataset="whu_honghu",
+        # WHU-Hi-HongHu: 940x475x270 (ENVI). ~3.9x PaviaU px and 2.6x its bands, so the
+        # spectral low-rank assumption (rank 12) is the real test. N scaled to PaviaU density;
+        # floors provisional until confirmed with a --record run.
+        full=Config(num_points=28000, max_num_points=56000, grow_stop_iter=2500,
+                    iterations=12000, qat_start=6000, rank=12),
+        psnr_min=28.0, bpppb_max=0.35,
+    ),
 ]
 
 # --- forthcoming "bigger" datasets ------------------------------------------------------
@@ -124,12 +133,6 @@ _BENCHMARKS = [
 # each is integrated). See docs/findings for the dataset survey. Chikusei is large; expect to
 # run it on SharcNet.
 _FORTHCOMING = [
-    Case(
-        name="whu_honghu", dataset="data/raw/WHU_Hi_HongHu.mat",
-        full=Config(num_points=28000, max_num_points=56000, grow_stop_iter=2500,
-                    iterations=12000, qat_start=6000, rank=12),
-        psnr_min=28.0, bpppb_max=0.35, forthcoming=True,
-    ),
     Case(
         name="chikusei", dataset="data/raw/Hyperspec_Chikusei.mat",
         full=Config(num_points=120000, max_num_points=240000, grow_stop_iter=3000,

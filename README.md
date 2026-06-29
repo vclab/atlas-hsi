@@ -181,9 +181,10 @@ small fixed container header). For programmatic access, use
 | Salinas | 180x180x204 | 12 | 5000 | 7000 |
 | JasperRidge | 100x100x198 | 10 | 600-2750 | 8000 |
 | Urban | 307x307x162 | 12 | 14500-29000 | 7000 |
+| WHU-Hi-HongHu (`whu_honghu`) | 940x475x270 | 12 | 28000-56000 | 12000 |
 
-Place raw `.mat` files in `data/raw/`; `atlas init` writes NMF outputs to `data/init/`.
-Override with `--data-dir` and `--init-dir`.
+Place raw dataset files (`.mat`, `.npy`, or ENVI `.bsq`/`.hdr`) in `data/raw/`; `atlas init`
+writes NMF outputs to `data/init/`. Override with `--data-dir` and `--init-dir`.
 
 ## Testing
 

@@ -2,10 +2,11 @@
 
 Provides a single ``load_cube`` entry point that accepts either a known benchmark
 dataset name (with its paper-matching preprocessing) or a path to an arbitrary
-``.mat`` / ``.npy`` hyperspectral cube. All loaders return a ``(H, W, C)`` float
-array normalized per band into roughly ``[0, 1]``.
+``.mat`` / ``.npy`` / ENVI hyperspectral cube. All loaders return a ``(H, W, C)``
+float array normalized per band into roughly ``[0, 1]``.
 """
 import os
+import re
 
 import numpy as np
 
@@ -17,7 +18,11 @@ DEFAULT_INIT_DIR = os.path.join("data", "init")
 # Endmember rank per benchmark dataset (default 12).
 _RANKS = {"jasperridge": 10}
 
-_KNOWN = {"urban", "salinas", "jasperridge", "paviau", "paviac"}
+_KNOWN = {"urban", "salinas", "jasperridge", "paviau", "paviac", "whu_honghu"}
+
+# ENVI data-type code -> numpy base dtype (byte order applied separately).
+_ENVI_DTYPE = {1: "u1", 2: "i2", 3: "i4", 4: "f4", 5: "f8",
+               12: "u2", 13: "u4", 14: "i8", 15: "u8"}
 
 
 def rank_for(name):
@@ -43,6 +48,38 @@ def _normalize_bands(cube):
         if m > 0:
             cube[:, :, i] /= m
     return cube
+
+
+def _load_envi(data_path):
+    """Read an ENVI cube (raw ``data_path`` + sidecar ``.hdr``) as ``(H, W, C)`` float.
+
+    Supports bsq/bil/bip interleave and the common data types. In ENVI headers
+    ``samples`` are columns (W), ``lines`` are rows (H), and ``bands`` are channels (C).
+    """
+    hdr_path = os.path.splitext(data_path)[0] + ".hdr"
+    with open(hdr_path) as fh:
+        hdr = fh.read()
+
+    def _int(key, default=None):
+        m = re.search(rf"^\s*{key}\s*=\s*(\d+)", hdr, re.IGNORECASE | re.MULTILINE)
+        return int(m.group(1)) if m else default
+
+    w, h, c, code = _int("samples"), _int("lines"), _int("bands"), _int("data type")
+    if None in (w, h, c, code):
+        raise ValueError(f"incomplete ENVI header: {hdr_path}")
+    offset = _int("header offset", 0)
+    endian = ">" if _int("byte order", 0) == 1 else "<"
+    m = re.search(r"^\s*interleave\s*=\s*(\w+)", hdr, re.IGNORECASE | re.MULTILINE)
+    interleave = (m.group(1).lower() if m else "bsq")
+
+    raw = np.fromfile(data_path, dtype=np.dtype(endian + _ENVI_DTYPE[code]), offset=offset)
+    if interleave == "bsq":      # stored (bands, lines, samples)
+        return raw.reshape(c, h, w).transpose(1, 2, 0).astype(float)
+    if interleave == "bil":      # stored (lines, bands, samples)
+        return raw.reshape(h, c, w).transpose(0, 2, 1).astype(float)
+    if interleave == "bip":      # stored (lines, samples, bands)
+        return raw.reshape(h, w, c).astype(float)
+    raise ValueError(f"unsupported ENVI interleave: {interleave}")
 
 
 def _load_known(name, data_dir):
@@ -78,11 +115,16 @@ def _load_known(name, data_dir):
         # no crop. ~6.8x the PaviaU 340x340 crop in spatial pixels.
         I = scipy.io.loadmat(os.path.join(data_dir, "Pavia.mat"))["pavia"].astype(float)
         return _normalize_bands(I)
+    if name == "whu_honghu":
+        # WHU-Hi-HongHu (RSIDEA, UAV Nano-Hyperspec): ENVI cube 940x475x270, float32,
+        # 400-1000 nm. ~3.9x the PaviaU 340x340 crop in pixels and 2.6x its bands.
+        I = _load_envi(os.path.join(data_dir, "WHU-Hi-HongHu.bsq"))
+        return _normalize_bands(np.clip(I, 0, None))
     raise ValueError(f"Unknown dataset: {name}")
 
 
 def _load_path(path):
-    """Load an arbitrary .mat/.npy cube → (H, W, C), normalized per band."""
+    """Load an arbitrary .mat/.npy/ENVI cube → (H, W, C), normalized per band."""
     ext = os.path.splitext(path)[1].lower()
     if ext == ".npy":
         cube = np.load(path).astype(float)
@@ -94,8 +136,10 @@ def _load_path(path):
         if not cubes:
             raise ValueError(f"No 3D array found in {path}")
         cube = max(cubes, key=lambda a: a.size).astype(float)  # pick the largest cube
+    elif ext in (".bsq", ".bil", ".bip", ".img", ".dat"):
+        cube = _load_envi(path)  # raw ENVI data file with a sidecar .hdr
     else:
-        raise ValueError(f"Unsupported cube extension: {ext} (use .mat or .npy)")
+        raise ValueError(f"Unsupported cube extension: {ext} (use .mat, .npy, or ENVI)")
     cube = np.clip(cube, 0, None)
     return _normalize_bands(cube)
 

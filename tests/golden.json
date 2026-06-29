@@ -22,5 +22,9 @@
   "urban": {
     "bpppb": 0.236,
     "psnr": 43.751
+  },
+  "whu_honghu": {
+    "bpppb": 0.05808,
+    "psnr": 35.312
   }
 }

@@ -35,6 +35,7 @@ _KNOWN_FILES = {
     "jasperridge": "jasperRidge2_R198.mat",
     "paviau": "PaviaU.mat",
     "paviac": "Pavia.mat",
+    "whu_honghu": "WHU-Hi-HongHu.bsq",
 }
 
 
