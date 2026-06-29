@@ -182,9 +182,12 @@ small fixed container header). For programmatic access, use
 | JasperRidge | 100x100x198 | 10 | 600-2750 | 8000 |
 | Urban | 307x307x162 | 12 | 14500-29000 | 7000 |
 | WHU-Hi-HongHu (`whu_honghu`) | 940x475x270 | 12 | 28000-56000 | 12000 |
+| Chikusei (`chikusei`) | 2372x2196x128 | 16 | 80000-160000 | 10000 |
 
 Place raw dataset files (`.mat`, `.npy`, or ENVI `.bsq`/`.hdr`) in `data/raw/`; `atlas init`
-writes NMF outputs to `data/init/`. Override with `--data-dir` and `--init-dir`.
+writes NMF outputs to `data/init/`. Override with `--data-dir` and `--init-dir`. Chikusei is
+auto-cropped to its largest all-valid region; the whole cube trains in VRAM (no tiling), so it
+needs a large-VRAM GPU (~24 GB) and the self-test skips it on smaller cards.
 
 ## Testing
 

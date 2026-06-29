@@ -158,6 +158,11 @@ def _run_one(case, mode, args, golden, failures, drifts, skipped, ran):
         print(f"  {case.name:<12} SKIP (no data){note}")
         skipped.append(case.name)
         return
+    if case.min_vram_gb and harness.gpu_vram_gb() < case.min_vram_gb:
+        print(f"  {case.name:<12} SKIP (needs >= {case.min_vram_gb:.0f} GB VRAM, "
+              f"have {harness.gpu_vram_gb():.1f})")
+        skipped.append(case.name)
+        return
     metrics, err, log = run_case_quiet(case, mode, args.verbose)
     if err is not None:
         print(f"  {case.name:<12} ERROR  {type(err).__name__}: {err}")

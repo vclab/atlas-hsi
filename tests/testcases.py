@@ -57,6 +57,7 @@ class Case:
     bpppb_tol_frac: float = 0.20  # golden tolerance, fraction of the golden rate
     quick_psnr_min: float = 12.0  # loose floor for --quick (just "it ran and isn't garbage")
     forthcoming: bool = False     # dataset not integrated yet; here so it auto-activates
+    min_vram_gb: float = 0.0      # skip (don't OOM/spill) if the GPU has less total VRAM
 
     @property
     def quick(self) -> Config:
@@ -125,20 +126,26 @@ _BENCHMARKS = [
                     iterations=12000, qat_start=6000, rank=12),
         psnr_min=28.0, bpppb_max=0.35,
     ),
+    Case(
+        name="chikusei", dataset="chikusei",
+        # Chikusei (ENVI), cropped to the largest all-valid rectangle 2372x2196x128 -- ~45x
+        # the PaviaU crop, the scalability stress test. The whole cube sits in VRAM (no
+        # tiling); the forward's full H*W*C reconstruction + autograd copies need ~16 GB
+        # *independent of N*, so this does NOT fit a 10 GB 3080 (measured 15.8 GB, spills to
+        # shared RAM). min_vram_gb gates it to a big GPU (A100/H100 on SharcNet). Because
+        # memory is ~N-independent here, N is bounded by time, not VRAM -- raise it on an
+        # 80 GB H100. Config + floors provisional until a --record run on a big GPU.
+        full=Config(num_points=80000, max_num_points=160000, grow_stop_iter=3000,
+                    iterations=10000, qat_start=5000, rank=16),
+        psnr_min=28.0, bpppb_max=0.40, min_vram_gb=24.0,
+    ),
 ]
 
 # --- forthcoming "bigger" datasets ------------------------------------------------------
-# Not yet integrated as known datasets: referenced by their expected raw-cube path so they
-# auto-skip until downloaded and auto-activate afterwards (configs provisional, tuned when
-# each is integrated). See docs/findings for the dataset survey. Chikusei is large; expect to
-# run it on SharcNet.
-_FORTHCOMING = [
-    Case(
-        name="chikusei", dataset="data/raw/Hyperspec_Chikusei.mat",
-        full=Config(num_points=120000, max_num_points=240000, grow_stop_iter=3000,
-                    iterations=14000, qat_start=7000, rank=16),
-        psnr_min=28.0, bpppb_max=0.40, forthcoming=True,
-    ),
-]
+# Not-yet-integrated datasets go here, referenced by their expected raw-cube path so they
+# auto-skip until downloaded and auto-activate afterwards (configs provisional). See
+# docs/findings for the dataset survey. (Empty: PaviaU/Salinas/JR/Urban/Pavia Centre/
+# WHU-Hi-HongHu/Chikusei are all integrated above.)
+_FORTHCOMING = []
 
 CASES: list[Case] = [*_SYNTHETIC, *_BENCHMARKS, *_FORTHCOMING]

@@ -36,6 +36,7 @@ _KNOWN_FILES = {
     "paviau": "PaviaU.mat",
     "paviac": "Pavia.mat",
     "whu_honghu": "WHU-Hi-HongHu.bsq",
+    "chikusei": "HyperspecVNIR_Chikusei_20140729.bsq",
 }
 
 
@@ -70,6 +71,15 @@ def gpu_ready() -> bool:
         return True
     except Exception:
         return False
+
+
+def gpu_vram_gb() -> float:
+    """Total VRAM of the current CUDA device in GB (0.0 if unavailable)."""
+    try:
+        import torch
+        return torch.cuda.mem_get_info()[1] / 1e9 if torch.cuda.is_available() else 0.0
+    except Exception:
+        return 0.0
 
 
 # --- datasets ---------------------------------------------------------------------------

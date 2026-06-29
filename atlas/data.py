@@ -18,7 +18,7 @@ DEFAULT_INIT_DIR = os.path.join("data", "init")
 # Endmember rank per benchmark dataset (default 12).
 _RANKS = {"jasperridge": 10}
 
-_KNOWN = {"urban", "salinas", "jasperridge", "paviau", "paviac", "whu_honghu"}
+_KNOWN = {"urban", "salinas", "jasperridge", "paviau", "paviac", "whu_honghu", "chikusei"}
 
 # ENVI data-type code -> numpy base dtype (byte order applied separately).
 _ENVI_DTYPE = {1: "u1", 2: "i2", 3: "i4", 4: "f4", 5: "f8",
@@ -74,11 +74,11 @@ def _load_envi(data_path):
 
     raw = np.fromfile(data_path, dtype=np.dtype(endian + _ENVI_DTYPE[code]), offset=offset)
     if interleave == "bsq":      # stored (bands, lines, samples)
-        return raw.reshape(c, h, w).transpose(1, 2, 0).astype(float)
+        return raw.reshape(c, h, w).transpose(1, 2, 0).astype(np.float32)
     if interleave == "bil":      # stored (lines, bands, samples)
-        return raw.reshape(h, c, w).transpose(0, 2, 1).astype(float)
+        return raw.reshape(h, c, w).transpose(0, 2, 1).astype(np.float32)
     if interleave == "bip":      # stored (lines, samples, bands)
-        return raw.reshape(h, w, c).astype(float)
+        return raw.reshape(h, w, c).astype(np.float32)
     raise ValueError(f"unsupported ENVI interleave: {interleave}")
 
 
@@ -119,6 +119,14 @@ def _load_known(name, data_dir):
         # WHU-Hi-HongHu (RSIDEA, UAV Nano-Hyperspec): ENVI cube 940x475x270, float32,
         # 400-1000 nm. ~3.9x the PaviaU 340x340 crop in pixels and 2.6x its bands.
         I = _load_envi(os.path.join(data_dir, "WHU-Hi-HongHu.bsq"))
+        return _normalize_bands(np.clip(I, 0, None))
+    if name == "chikusei":
+        # Chikusei (U-Tokyo SAL): ENVI cube 2517x2335x128, int16, 363-1018 nm. Crop to the
+        # largest all-valid rectangle (rows 63:2435, cols 58:2254 -> 2372x2196) to drop the
+        # flight strip's zero-border corners, which would otherwise waste Gaussians and break
+        # the NMF. ~45x the PaviaU 340x340 crop.
+        I = _load_envi(os.path.join(data_dir, "HyperspecVNIR_Chikusei_20140729.bsq"))
+        I = I[63:2435, 58:2254, :]
         return _normalize_bands(np.clip(I, 0, None))
     raise ValueError(f"Unknown dataset: {name}")
 
