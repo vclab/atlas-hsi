@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "atlas-hsi"
 version = "0.1.0"
-description = "ATLAS — Adaptive Transfer of Low-rank Abundance Splatting: hyperspectral image compression via low-rank spectral Gaussian splatting."
+description = "ATLAS (Adaptive Transfer of Low-rank Abundance Splatting): hyperspectral image compression via low-rank spectral Gaussian splatting."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"

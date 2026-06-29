@@ -22,6 +22,7 @@ from subprocess import STDOUT, check_output
 
 _RELEASE_RE = re.compile(r"release (\d+\.\d+)")
 _MARK = {"ok": "[ OK ]", "warn": "[WARN]", "error": "[FAIL]", "info": "[INFO]"}
+GSPLAT_REPO = "https://github.com/jacobh3ll0/atlas-gsplat"
 
 
 # --- CUDA toolkit detection (torch-free, atlas-gsplat-free) ------------------------
@@ -106,7 +107,7 @@ def match_status(built_cuda: str | None, toolkit_version: str | None) -> tuple[s
     tag = cu_tag(toolkit_version) or "cuXYZ"
     return ("error",
             f"CUDA major mismatch: torch is built for {built_cuda} but the toolkit is "
-            f"{toolkit_version}. Building the kernel will fail. Align them — either:\n"
+            f"{toolkit_version}. Building the kernel will fail. Align them. Either:\n"
             f"      (a) match torch to your toolkit:\n"
             f"          pip install torch --index-url "
             f"https://download.pytorch.org/whl/{tag}\n"
@@ -203,6 +204,23 @@ def overall_ok(report: dict) -> bool:
     return report.get("kernel_prebuilt", False) or report["match_level"] == "ok"
 
 
+def install_hint(report: dict) -> list[str]:
+    """Copy-pasteable command(s) to install the kernel for *this* environment.
+
+    Leads with a CUDA build of torch when one is missing (the kernel compiles against
+    torch's CUDA), then the kernel itself with ``--no-build-isolation`` so the source
+    build can see that torch. The toolkit prerequisite is covered by ``match_message``.
+    """
+    t = report["torch"]
+    built = t.get("built_cuda") if t.get("installed") else None
+    hints: list[str] = []
+    if built is None:
+        hints.append("# install a CUDA build of torch first, e.g. for CUDA 12.4:")
+        hints.append("pip install torch --index-url https://download.pytorch.org/whl/cu124")
+    hints.append(f'pip install --no-build-isolation "git+{GSPLAT_REPO}"')
+    return hints
+
+
 def format_report(report: dict) -> str:
     """Render a report dict as human-readable text."""
     lines = ["ATLAS environment check", "=" * 23, ""]
@@ -227,8 +245,8 @@ def format_report(report: dict) -> str:
         extra = " (prebuilt kernel present)" if report.get("kernel_prebuilt") else ""
         lines.append(f"{_MARK['ok']} atlas-gsplat installed{extra}")
     else:
-        lines.append(f"{_MARK['error']} atlas-gsplat NOT installed  "
-                     f"(pip install ./atlas-gsplat on a CUDA box)")
+        lines.append(f"{_MARK['error']} atlas-gsplat NOT installed; install it with:")
+        lines += [f"       {h}" for h in install_hint(report)]
 
     # A prebuilt kernel runs without the toolkit, so a build-time CUDA mismatch is not
     # fatal — demote it to an informational note instead of a failure.

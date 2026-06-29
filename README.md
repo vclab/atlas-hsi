@@ -25,11 +25,13 @@ ATLAS needs a CUDA GPU. It installs as two packages: the pure-Python `atlas-hsi`
 CUDA kernel `atlas-gsplat` (see [its README](atlas-gsplat/README.md)).
 
 ```bash
-# 1. PyTorch matching your CUDA (if not already installed)
-pip install torch
+# 1. PyTorch built for a specific CUDA version. Pick one you can get a toolkit for
+#    (here, CUDA 12.4) and note it: step 2 compiles against this CUDA major.
+pip install torch --index-url https://download.pytorch.org/whl/cu124
 
-# 2. The CUDA rasterization kernel (builds from source; needs nvcc and the torch above).
-#    --no-build-isolation lets the build see your installed torch (see Troubleshooting).
+# 2. The CUDA rasterization kernel. It builds from source, so it needs a CUDA toolkit
+#    (nvcc) of the same major as the torch above (here, CUDA 12.x), and
+#    --no-build-isolation so the build can see that torch (see Troubleshooting).
 pip install --no-build-isolation "git+https://github.com/jacobh3ll0/atlas-gsplat"
 
 # 3. ATLAS
