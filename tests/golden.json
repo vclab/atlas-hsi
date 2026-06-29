@@ -3,6 +3,10 @@
     "bpppb": 0.17879,
     "psnr": 41.471
   },
+  "paviac": {
+    "bpppb": 0.11008,
+    "psnr": 38.941
+  },
   "paviau": {
     "bpppb": 0.15074,
     "psnr": 41.13

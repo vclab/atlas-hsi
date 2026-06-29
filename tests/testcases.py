@@ -107,19 +107,23 @@ _BENCHMARKS = [
         # higher than the 14.5k two-stage-QAT point; ceiling brackets it with headroom.
         psnr_min=33.0, bpppb_max=0.32,
     ),
+    Case(
+        name="paviac", dataset="paviac",
+        # Pavia Centre: same ROSIS sensor/spectral family as PaviaU, ~6.8x the pixels. N is
+        # scaled from PaviaU's Gaussian density; floors are provisional until confirmed with a
+        # --record run on the real cube.
+        full=Config(num_points=36000, max_num_points=72000, grow_stop_iter=2500,
+                    iterations=12000, qat_start=6000, rank=12),
+        psnr_min=32.0, bpppb_max=0.25,
+    ),
 ]
 
 # --- forthcoming "bigger" datasets ------------------------------------------------------
-# Referenced by their expected raw-cube path so they auto-skip until downloaded and
-# auto-activate afterwards (the configs are provisional and tuned when each is integrated).
-# See docs/findings for the dataset survey. Chikusei is large; expect to run it on SharcNet.
+# Not yet integrated as known datasets: referenced by their expected raw-cube path so they
+# auto-skip until downloaded and auto-activate afterwards (configs provisional, tuned when
+# each is integrated). See docs/findings for the dataset survey. Chikusei is large; expect to
+# run it on SharcNet.
 _FORTHCOMING = [
-    Case(
-        name="paviac", dataset="data/raw/Pavia.mat",
-        full=Config(num_points=24000, max_num_points=48000, grow_stop_iter=2500,
-                    iterations=12000, qat_start=6000, rank=12),
-        psnr_min=30.0, bpppb_max=0.30, forthcoming=True,
-    ),
     Case(
         name="whu_honghu", dataset="data/raw/WHU_Hi_HongHu.mat",
         full=Config(num_points=28000, max_num_points=56000, grow_stop_iter=2500,

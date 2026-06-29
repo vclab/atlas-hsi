@@ -34,6 +34,7 @@ _KNOWN_FILES = {
     "salinas": "Salinas.mat",
     "jasperridge": "jasperRidge2_R198.mat",
     "paviau": "PaviaU.mat",
+    "paviac": "Pavia.mat",
 }
 
 

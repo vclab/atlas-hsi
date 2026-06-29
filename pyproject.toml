@@ -60,6 +60,11 @@ where = ["."]
 include = ["atlas", "atlas.*"]
 exclude = ["atlas-gsplat*", "tests*"]
 
+[tool.pytest.ini_options]
+markers = [
+    "gpu: requires a CUDA GPU and the atlas_gsplat kernel (auto-skipped without them)",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py39"

@@ -17,7 +17,7 @@ DEFAULT_INIT_DIR = os.path.join("data", "init")
 # Endmember rank per benchmark dataset (default 12).
 _RANKS = {"jasperridge": 10}
 
-_KNOWN = {"urban", "salinas", "jasperridge", "paviau"}
+_KNOWN = {"urban", "salinas", "jasperridge", "paviau", "paviac"}
 
 
 def rank_for(name):
@@ -72,6 +72,12 @@ def _load_known(name, data_dir):
         I = scipy.io.loadmat(os.path.join(data_dir, "PaviaU.mat"))["paviaU"].astype(float)
         I = _normalize_bands(I)
         return I[-340:, :, :]
+    if name == "paviac":
+        # Pavia Centre (GIC): the distributed Pavia.mat is the corrected 1096x715x102 region
+        # (variable "pavia"), same ROSIS sensor and spectral family as PaviaU. Full scene,
+        # no crop. ~6.8x the PaviaU 340x340 crop in spatial pixels.
+        I = scipy.io.loadmat(os.path.join(data_dir, "Pavia.mat"))["pavia"].astype(float)
+        return _normalize_bands(I)
     raise ValueError(f"Unknown dataset: {name}")
 
 

@@ -177,12 +177,35 @@ small fixed container header). For programmatic access, use
 | Dataset | Shape | Rank | Typical N | Iterations |
 |---------|-------|------|-----------|------------|
 | PaviaU | 340x340x103 | 12 | 10000-23000 | 7000 |
+| Pavia Centre (`paviac`) | 1096x715x102 | 12 | 36000-72000 | 12000 |
 | Salinas | 180x180x204 | 12 | 5000 | 7000 |
 | JasperRidge | 100x100x198 | 10 | 600-2750 | 8000 |
 | Urban | 307x307x162 | 12 | 14500-29000 | 7000 |
 
 Place raw `.mat` files in `data/raw/`; `atlas init` writes NMF outputs to `data/init/`.
 Override with `--data-dir` and `--init-dir`.
+
+## Testing
+
+Two layers. The CPU-only unit suite (`tests/`, run by CI) covers the entropy codec and
+bitstream container, data utilities, the `doctor` diagnostics, `init`, and `viz` without a
+GPU. The self-test orchestrator runs the whole package end to end, one command:
+
+```bash
+python tests/selftest.py            # full pipeline on every present dataset
+python tests/selftest.py --quick    # short schedule, fast sanity (seconds-minutes)
+python tests/selftest.py --list     # show cases and which datasets are present
+python tests/selftest.py --only paviau salinas
+```
+
+It runs three stages: the CPU unit tier, a synthetic tiny-cube `train -> compress ->
+decompress` round-trip, and a dataset matrix that trains, serializes to an `.atlas`
+bitstream, decodes through the real codec, and reports reconstruction PSNR and `bpppb`. Each
+case enforces hard floors (PSNR and rate), and checks recorded golden values for drift.
+Refresh the golden values after an intended change with `--record`. Datasets whose cube is
+not in `data/raw/` are skipped, so a new dataset is exercised the moment its file is present.
+The GPU stages need a CUDA device and the `atlas-gsplat` kernel; they are skipped otherwise.
+Test cases live in `tests/testcases.py`.
 
 ## How it works
 
