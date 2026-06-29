@@ -1,0 +1,22 @@
+{
+  "jasperridge": {
+    "bpppb": 0.17879,
+    "psnr": 41.471
+  },
+  "paviau": {
+    "bpppb": 0.15074,
+    "psnr": 41.13
+  },
+  "salinas": {
+    "bpppb": 0.09945,
+    "psnr": 42.821
+  },
+  "tiny_cube": {
+    "bpppb": 1.98715,
+    "psnr": 35.961
+  },
+  "urban": {
+    "bpppb": 0.236,
+    "psnr": 43.751
+  }
+}
