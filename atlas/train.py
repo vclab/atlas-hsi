@@ -180,35 +180,57 @@ class SimpleTrainerHSI:
         return (psnr_value, ms_ssim_value, end_time, test_end_time, 1 / test_end_time,
                 bpppb, best_psnr_value, best_ms_ssim_value, best_sam, best_bpppb)
 
+    @staticmethod
+    def _ms_ssim_chunked(recon, ref, win_size, max_ch=16):
+        """MS-SSIM averaged over spectral channels, computed in channel chunks so peak
+        memory scales with the chunk size, not the full band count. ``size_average=True``
+        averages the score over (N, C), so a channel-count-weighted mean of chunk scores
+        is numerically exact -- but a full-band cube (e.g. Chikusei's 128, WHU-Hi's 270
+        at multi-megapixel resolution) builds gaussian pyramids that overflow even a 40 GB
+        A100, while a 16-band slice does not."""
+        C = recon.shape[1]
+        if C <= max_ch:
+            return ms_ssim(recon, ref, data_range=1, size_average=True, win_size=win_size).item()
+        total, count = 0.0, 0
+        for s in range(0, C, max_ch):
+            e = min(s + max_ch, C)
+            v = ms_ssim(recon[:, s:e], ref[:, s:e], data_range=1,
+                        size_average=True, win_size=win_size).item()
+            total += v * (e - s)
+            count += (e - s)
+        return total / count
+
     def test(self, best=False):
         self.gaussian_model.eval()
         with torch.no_grad():
             out = self.gaussian_model.forward_quantize()
+            unit_bit = out["unit_bit"]
             A = out["render"].float()
             E = FakeQuantizationHalf.apply(self.gaussian_model.endmember_activated.to(torch.float32))
             I = A @ E
+            del A, E, out
             I = I.view(-1, self.H, self.W, self.C).permute(0, 3, 1, 2).contiguous()
 
-            # Per-channel MSE → per-channel PSNR → mean PSNR.
-            mse_per_channel = F.mse_loss(I, self.gt_image, reduction='none')
-            mse_per_channel_avg = mse_per_channel.mean(dim=(0, 2, 3))
-            psnr_per_channel = 10 * torch.log10(1.0 / mse_per_channel_avg)
-            psnr = psnr_per_channel.mean().item()
+            # Per-channel MSE → per-channel PSNR → mean PSNR. The reduction='none' temporary
+            # is a full-cube tensor; reduce and drop it before MS-SSIM so it is not held
+            # resident alongside the pyramids (matters on multi-megapixel cubes).
+            mse_per_channel_avg = F.mse_loss(I, self.gt_image, reduction='none').mean(dim=(0, 2, 3))
+            psnr = (10 * torch.log10(1.0 / mse_per_channel_avg)).mean().item()
+            del mse_per_channel_avg
 
         # MS-SSIM does 4 downsamplings, so it needs min(H, W) > (win_size - 1) * 2**4
         # (= 96 for win_size=7). Tiny cubes (e.g. the quickstart fixture) fall below this
         # floor; report NaN rather than crashing the whole run. PSNR/bpppb stay valid.
         ms_ssim_win = 7
         if min(self.H, self.W) > (ms_ssim_win - 1) * 2 ** 4:
-            ms_ssim_value = ms_ssim(
-                I, self.gt_image.float(), data_range=1, size_average=True, win_size=ms_ssim_win).item()
+            ms_ssim_value = self._ms_ssim_chunked(I, self.gt_image.float(), ms_ssim_win)
         else:
             ms_ssim_value = float("nan")
         mean_sam = compute_sam(
             self.gt_image.squeeze(0).permute(1, 2, 0).cpu().numpy(),
             I.squeeze(0).permute(1, 2, 0).cpu().numpy())
 
-        m_bit, s_bit, r_bit, c_bit = out["unit_bit"]
+        m_bit, s_bit, r_bit, c_bit = unit_bit
         e_bit = self.rank * self.C * 16
         bpppb = (m_bit + s_bit + r_bit + c_bit + e_bit) / self.H / self.W / self.C
 

@@ -1,4 +1,8 @@
 {
+  "chikusei": {
+    "bpppb": 0.03358,
+    "psnr": 40.094
+  },
   "jasperridge": {
     "bpppb": 0.17879,
     "psnr": 41.471
