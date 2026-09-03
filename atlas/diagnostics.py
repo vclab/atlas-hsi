@@ -22,7 +22,7 @@ from subprocess import STDOUT, check_output
 
 _RELEASE_RE = re.compile(r"release (\d+\.\d+)")
 _MARK = {"ok": "[ OK ]", "warn": "[WARN]", "error": "[FAIL]", "info": "[INFO]"}
-GSPLAT_REPO = "https://github.com/jacobh3ll0/atlas-gsplat"
+GSPLAT_REPO = "https://github.com/vclab/atlas-gsplat"
 
 
 # --- CUDA toolkit detection (torch-free, atlas-gsplat-free) ------------------------

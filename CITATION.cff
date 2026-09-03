@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use ATLAS, please cite the paper below."
+type: software
+title: "ATLAS: Hyperspectral Image Compression via Adaptive Transfer of Low-rank Abundance Splatting"
+authors:
+  - family-names: Rempel
+    given-names: Jacob
+    affiliation: "Visual Computing Lab, Ontario Tech University"
+repository-code: "https://github.com/vclab/atlas-hsi"
+license: MIT
+version: 0.1.0
+date-released: 2026-09-03
+keywords:
+  - hyperspectral
+  - image compression
+  - gaussian splatting
+  - low-rank
+  - remote sensing

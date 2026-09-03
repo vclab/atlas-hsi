@@ -4,7 +4,7 @@ try:
 except ImportError as _kernel_import_error:
     raise ImportError(
         "ATLAS needs the CUDA kernel package `atlas-gsplat`, which is not installed.\n"
-        '  pip install --no-build-isolation "git+https://github.com/jacobh3ll0/atlas-gsplat"\n'
+        '  pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"\n'
         "  (needs a CUDA toolkit matching your torch build; run `atlas doctor` to check)\n"
         f"original import error: {_kernel_import_error}"
     ) from _kernel_import_error

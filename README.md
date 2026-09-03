@@ -32,7 +32,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cu124
 # 2. The CUDA rasterization kernel. It builds from source, so it needs a CUDA toolkit
 #    (nvcc) of the same major as the torch above (here, CUDA 12.x), and
 #    --no-build-isolation so the build can see that torch (see Troubleshooting).
-pip install --no-build-isolation "git+https://github.com/jacobh3ll0/atlas-gsplat"
+pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"
 
 # 3. ATLAS
 pip install atlas-hsi

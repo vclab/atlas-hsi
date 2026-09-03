@@ -61,3 +61,7 @@ demo/cache/
 /atlas-gsplat/
 /CLAUDE.md
 *.pdf
+
+# --- Local tooling and scratch ---
+.claude/
+/deleteme/
