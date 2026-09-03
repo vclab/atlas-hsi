@@ -122,9 +122,12 @@ _BENCHMARKS = [
         # WHU-Hi-HongHu: 940x475x270 (ENVI). ~3.9x PaviaU px and 2.6x its bands, so the
         # spectral low-rank assumption (rank 12) is the real test. N scaled to PaviaU density;
         # floors provisional until confirmed with a --record run.
+        # Training's HxWxC activation footprint exceeds a 10 GB 3080: on WSL2 the driver
+        # spills to shared host RAM instead of raising OOM and the VM froze (2026-08-18).
+        # Peak unmeasured; 12 GB is a lower-bound gate, measure before trusting a 12 GB card.
         full=Config(num_points=28000, max_num_points=56000, grow_stop_iter=2500,
                     iterations=12000, qat_start=6000, rank=12),
-        psnr_min=28.0, bpppb_max=0.35,
+        psnr_min=28.0, bpppb_max=0.35, min_vram_gb=12.0,
     ),
     Case(
         name="chikusei", dataset="chikusei",

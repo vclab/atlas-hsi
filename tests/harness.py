@@ -7,6 +7,7 @@ CPU-only CI to collect the pytest GPU test without a GPU present.
 """
 from __future__ import annotations
 
+import ctypes
 import importlib.util
 import json
 import sys
@@ -53,11 +54,33 @@ def get_case(name: str) -> testcases.Case:
 
 
 # --- environment ------------------------------------------------------------------------
+def _preload_nvrtc_builtins() -> None:
+    """Preload libnvrtc-builtins from the pip CUDA-13 wheel, if one is installed.
+
+    torch cu13 wheels load libnvrtc.so.13 by full path, but nvrtc dlopens its builtins
+    lazily by bare soname at first JIT; the wheel's lib dir is on no search path, so
+    jiterated CUDA reductions (torch.prod inside the MS-SSIM eval) fail at the end of
+    an otherwise-complete training run. dlopen resolves a soname that is already
+    loaded to the existing handle, so one full-path CDLL here fixes every later JIT.
+    """
+    spec = importlib.util.find_spec("nvidia")
+    if spec is None or not spec.submodule_search_locations:
+        return
+    for root in spec.submodule_search_locations:
+        for lib in sorted(Path(root).glob("cu13/lib/libnvrtc-builtins.so.*")):
+            try:
+                ctypes.CDLL(str(lib))
+            except OSError:
+                pass
+            return
+
+
 def _ensure_kernel_on_path() -> None:
     """Make the local atlas-gsplat checkout importable when the wheel isn't installed
     (the dev box ships a prebuilt csrc.so there; on a cluster you'd pip install it)."""
     if importlib.util.find_spec("atlas_gsplat") is None and KERNEL_DIR.is_dir():
         sys.path.insert(0, str(KERNEL_DIR))
+    _preload_nvrtc_builtins()
 
 
 def gpu_ready() -> bool:

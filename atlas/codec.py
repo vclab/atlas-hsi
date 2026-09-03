@@ -99,8 +99,12 @@ def encode_model(model):
     return _pack(meta, arrays)
 
 
-def reconstruct(meta, arrays):
-    """Reconstruct the ``(H, W, C)`` cube from decoded bitstream arrays. Needs the CUDA kernel."""
+def reconstruct(meta, arrays, return_abundance=False):
+    """Reconstruct the ``(H, W, C)`` cube from decoded bitstream arrays. Needs the CUDA kernel.
+
+    With ``return_abundance=True``, stop before the endmember mixing matmul and return the
+    splatted ``(H, W, rank)`` abundance map instead: the compressed-domain representation
+    (partial decoding; the H*W*C cube is never materialized)."""
     import torch
     from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
     from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum_general
@@ -134,6 +138,8 @@ def reconstruct(meta, arrays):
             H, W, BH, BW, return_alpha=False)
         out = torch.clamp(out, 0, 1).view(H * W, rank) * torch.exp(
             torch.tensor(float(meta["coef"]), device=dev))
+        if return_abundance:
+            return out.view(H, W, rank).detach().cpu().numpy()
         cube = (out @ E).view(H, W, C)
     return cube.detach().cpu().numpy()
 
@@ -152,10 +158,13 @@ def read_bitstream(path):
         return _unpack(fh.read())
 
 
-def decompress(path):
-    """Read an ATLAS bitstream file and reconstruct the ``(H, W, C)`` cube (needs CUDA)."""
+def decompress(path, abundance=False):
+    """Read an ATLAS bitstream file and reconstruct the ``(H, W, C)`` cube (needs CUDA).
+
+    ``abundance=True`` returns the ``(H, W, rank)`` splatted abundance map instead
+    (partial decoding, see :func:`reconstruct`)."""
     meta, arrays = read_bitstream(path)
-    return reconstruct(meta, arrays)
+    return reconstruct(meta, arrays, return_abundance=abundance)
 
 
 def payload_bits(meta, arrays):
