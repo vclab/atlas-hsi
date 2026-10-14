@@ -1,10 +1,8 @@
 # ATLAS quickstart example
 
-A tiny synthetic hyperspectral cube for verifying your install and learning the workflow
-end to end. It also serves as a smoke test: if these steps run, your `atlas` and
-`atlas-gsplat` setup is working.
+A tiny synthetic hyperspectral cube for verifying your install and running ATLAS. If these steps run, your installation is correct.
 
-## The fixture
+## Test Data
 
 - `tiny_cube.npy` is a 48x48x20 cube (about 180 KiB) with genuine rank-4 structure
   (`X = A·E`): 4 smooth endmember spectra mixed by smooth abundance blobs, plus mild noise.
@@ -46,7 +44,7 @@ PSNR (about 35-37 dB) and bpppb are the meaningful numbers here.
 
 ## Inspect it (no GPU needed)
 
-With the `[viz]` extra (`pip install "atlas-hsi[viz]"`):
+With the `[viz]` extra (`pip install "atlas-hsi[viz] @ git+https://github.com/vclab/atlas-hsi"`):
 
 ```python
 import atlas
@@ -62,3 +60,22 @@ A0 = atlas.load_abundance("tiny_cube", rank=4, init_dir="examples/init")
 viz.plot_endmembers(E, show=True)                          # the 4 endmember spectra
 viz.show_abundance_maps(A0, shape=(H, W), show=True)       # the 4 abundance maps
 ```
+
+The three calls produce the figures below.
+
+**Pseudo-RGB preview.** Bands 3, 10, and 16 shown as red, green, and blue, each stretched to
+its own range. The colored regions are the abundance blobs seen through their spectra, and the
+speckle is the fixture's added noise.
+
+![Pseudo-RGB preview of the tiny cube](images/pseudo_rgb.png)
+
+**Endmember spectra.** The 4 spectra NMF recovers, one value per band. Endmember 1 rises
+toward the last bands, which is why its region at the top right shows as blue in the preview.
+
+![The 4 endmember spectra recovered by NMF](images/endmembers.png)
+
+**Abundance maps.** How much of each endmember every pixel contains; component *i* weights
+endmember *i*. Each map is a smooth blob, the low-rank spatial structure that ATLAS fits with
+2D Gaussians.
+
+![The 4 NMF abundance maps](images/abundance_maps.png)
