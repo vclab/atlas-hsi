@@ -245,4 +245,7 @@ ECCV 2024), and ports techniques from GaussianImage++ (Li et al., AAAI 2026).
 
 ## License
 
-MIT (see `LICENSE`). The `atlas-gsplat` kernel is Apache-2.0 (derived from nerfstudio gsplat).
+MIT (see `LICENSE`), which also carries the copyright notices of the LoR-SGS and GaussianImage
+code that ATLAS builds on. `atlas/optimizer.py` is the Adan optimizer (Garena Online), licensed
+under Apache-2.0 (see `LICENSE-APACHE`). The `atlas-gsplat` kernel is Apache-2.0 (derived from
+nerfstudio gsplat).

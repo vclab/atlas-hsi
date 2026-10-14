@@ -8,8 +8,8 @@ version = "0.1.0"
 description = "ATLAS (Adaptive Transfer of Low-rank Abundance Splatting): hyperspectral image compression via low-rank spectral Gaussian splatting."
 readme = "README.md"
 requires-python = ">=3.9"
-license = "MIT"
-license-files = ["LICENSE"]
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "LICENSE-APACHE"]
 authors = [{ name = "Jacob Rempel" }]
 keywords = ["hyperspectral", "compression", "gaussian-splatting", "low-rank", "remote-sensing"]
 classifiers = [
