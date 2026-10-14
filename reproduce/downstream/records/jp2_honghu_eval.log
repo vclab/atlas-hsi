@@ -1,0 +1,16 @@
+whu_honghu/recon: 386693 labeled px, 270-dim features, 22 classes
+  draw 0: SVM OA 0.9079 | RF OA 0.8286  (188s)
+  draw 1: SVM OA 0.9112 | RF OA 0.8394  (169s)
+  draw 2: SVM OA 0.9040 | RF OA 0.8344  (108s)
+  draw 3: SVM OA 0.9089 | RF OA 0.8388  (74s)
+  draw 4: SVM OA 0.9118 | RF OA 0.8442  (82s)
+  draw 5: SVM OA 0.9046 | RF OA 0.8380  (80s)
+  draw 6: SVM OA 0.9112 | RF OA 0.8382  (76s)
+  draw 7: SVM OA 0.9100 | RF OA 0.8316  (80s)
+  draw 8: SVM OA 0.9149 | RF OA 0.8342  (77s)
+  draw 9: SVM OA 0.9061 | RF OA 0.8311  (77s)
+
+                           OA               AA            kappa
+SVM           0.9091 ± 0.0033  0.9026 ± 0.0026  0.8860 ± 0.0039
+RF            0.8358 ± 0.0045  0.8246 ± 0.0040  0.7974 ± 0.0052
+written: whu_honghu_recon_jp2.json

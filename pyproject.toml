@@ -26,7 +26,7 @@ classifiers = [
 # Core runtime deps. NOTE: the CUDA rasterization kernel ships as a SEPARATE
 # distribution (`atlas-gsplat`, a fork of nerfstudio gsplat with 2D splatting
 # functions). It is not yet on PyPI, so install it separately, e.g.:
-#   pip install "git+https://github.com/<org>/atlas-gsplat"
+#   pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"
 # It is intentionally omitted here so `pip install atlas-hsi` does not fail on
 # machines without a CUDA toolchain (e.g. for data-only / inspection use).
 dependencies = [

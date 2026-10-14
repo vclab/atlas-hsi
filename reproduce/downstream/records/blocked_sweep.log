@@ -1,0 +1,241 @@
+paviau/original: 30556 labeled px, 103-dim features, 8 classes, split=blocked
+  draw 0: SVM OA 0.8774 | RF OA 0.8007  (3s)
+  draw 1: SVM OA 0.9123 | RF OA 0.8055  (1s)
+  draw 2: SVM OA 0.7596 | RF OA 0.6188  (1s)
+  draw 3: SVM OA 0.8276 | RF OA 0.7019  (1s)
+  draw 4: SVM OA 0.7848 | RF OA 0.6908  (1s)
+  draw 5: SVM OA 0.8441 | RF OA 0.7562  (1s)
+  draw 6: SVM OA 0.8639 | RF OA 0.7590  (1s)
+  draw 7: SVM OA 0.8809 | RF OA 0.7792  (1s)
+  draw 8: SVM OA 0.8163 | RF OA 0.7737  (1s)
+  draw 9: SVM OA 0.8455 | RF OA 0.7662  (1s)
+
+                           OA               AA            kappa
+SVM           0.8412 ± 0.0437  0.8688 ± 0.0215  0.7906 ± 0.0610
+RF            0.7452 ± 0.0550  0.7855 ± 0.0325  0.6702 ± 0.0757
+written: paviau_original_blocked.json
+paviau/recon: 30556 labeled px, 103-dim features, 8 classes, split=blocked
+  draw 0: SVM OA 0.8872 | RF OA 0.7865  (3s)
+  draw 1: SVM OA 0.8995 | RF OA 0.8083  (1s)
+  draw 2: SVM OA 0.7711 | RF OA 0.6275  (1s)
+  draw 3: SVM OA 0.8544 | RF OA 0.7168  (1s)
+  draw 4: SVM OA 0.8659 | RF OA 0.7202  (1s)
+  draw 5: SVM OA 0.8503 | RF OA 0.7594  (1s)
+  draw 6: SVM OA 0.8942 | RF OA 0.8026  (1s)
+  draw 7: SVM OA 0.8940 | RF OA 0.7782  (1s)
+  draw 8: SVM OA 0.8582 | RF OA 0.7883  (1s)
+  draw 9: SVM OA 0.8464 | RF OA 0.7731  (1s)
+
+                           OA               AA            kappa
+SVM           0.8621 ± 0.0358  0.8785 ± 0.0151  0.8166 ± 0.0507
+RF            0.7561 ± 0.0520  0.7968 ± 0.0291  0.6830 ± 0.0740
+written: paviau_recon_blocked.json
+paviau/recon: 30556 labeled px, 103-dim features, 8 classes, split=blocked
+  draw 0: SVM OA 0.7986 | RF OA 0.7179  (1s)
+  draw 1: SVM OA 0.8545 | RF OA 0.7265  (1s)
+  draw 2: SVM OA 0.7386 | RF OA 0.6092  (1s)
+  draw 3: SVM OA 0.7393 | RF OA 0.6885  (1s)
+  draw 4: SVM OA 0.8075 | RF OA 0.7395  (1s)
+  draw 5: SVM OA 0.7812 | RF OA 0.7026  (1s)
+  draw 6: SVM OA 0.7928 | RF OA 0.7033  (1s)
+  draw 7: SVM OA 0.8229 | RF OA 0.7475  (1s)
+  draw 8: SVM OA 0.8207 | RF OA 0.7600  (1s)
+  draw 9: SVM OA 0.7456 | RF OA 0.6776  (1s)
+
+                           OA               AA            kappa
+SVM           0.7902 ± 0.0372  0.7546 ± 0.0277  0.7208 ± 0.0456
+RF            0.7072 ± 0.0410  0.7145 ± 0.0238  0.6218 ± 0.0550
+written: paviau_recon_blocked_jp2.json
+paviau/abundance: 30556 labeled px, 12-dim features, 8 classes, split=blocked
+  draw 0: SVM OA 0.9178 | RF OA 0.8833  (2s)
+  draw 1: SVM OA 0.9093 | RF OA 0.8780  (1s)
+  draw 2: SVM OA 0.7900 | RF OA 0.6727  (1s)
+  draw 3: SVM OA 0.9021 | RF OA 0.8133  (1s)
+  draw 4: SVM OA 0.8534 | RF OA 0.7657  (1s)
+  draw 5: SVM OA 0.8664 | RF OA 0.8103  (1s)
+  draw 6: SVM OA 0.8772 | RF OA 0.8095  (1s)
+  draw 7: SVM OA 0.8920 | RF OA 0.8640  (1s)
+  draw 8: SVM OA 0.9020 | RF OA 0.8435  (1s)
+  draw 9: SVM OA 0.8613 | RF OA 0.7974  (1s)
+
+                           OA               AA            kappa
+SVM           0.8771 ± 0.0356  0.8927 ± 0.0175  0.8362 ± 0.0521
+RF            0.8138 ± 0.0591  0.8563 ± 0.0212  0.7588 ± 0.0766
+written: paviau_abundance_blocked.json
+paviau/a0: 30556 labeled px, 12-dim features, 8 classes, split=blocked
+  draw 0: SVM OA 0.8668 | RF OA 0.8426  (2s)
+  draw 1: SVM OA 0.8889 | RF OA 0.8551  (1s)
+  draw 2: SVM OA 0.7732 | RF OA 0.6510  (1s)
+  draw 3: SVM OA 0.8401 | RF OA 0.7527  (1s)
+  draw 4: SVM OA 0.8046 | RF OA 0.7662  (1s)
+  draw 5: SVM OA 0.8212 | RF OA 0.7857  (1s)
+  draw 6: SVM OA 0.8785 | RF OA 0.8538  (1s)
+  draw 7: SVM OA 0.8570 | RF OA 0.8574  (1s)
+  draw 8: SVM OA 0.8547 | RF OA 0.8167  (1s)
+  draw 9: SVM OA 0.8398 | RF OA 0.8158  (1s)
+
+                           OA               AA            kappa
+SVM           0.8425 ± 0.0333  0.8720 ± 0.0098  0.7921 ± 0.0493
+RF            0.7997 ± 0.0611  0.8463 ± 0.0230  0.7401 ± 0.0808
+written: paviau_a0_blocked.json
+paviac/original: 148152 labeled px, 102-dim features, 9 classes, split=blocked
+  draw 0: SVM OA 0.9615 | RF OA 0.9563  (2s)
+  draw 1: SVM OA 0.9674 | RF OA 0.9437  (2s)
+  draw 2: SVM OA 0.9716 | RF OA 0.9452  (2s)
+  draw 3: SVM OA 0.9680 | RF OA 0.9485  (2s)
+  draw 4: SVM OA 0.9706 | RF OA 0.9576  (2s)
+  draw 5: SVM OA 0.9507 | RF OA 0.9312  (2s)
+  draw 6: SVM OA 0.9669 | RF OA 0.9475  (2s)
+  draw 7: SVM OA 0.9600 | RF OA 0.9526  (2s)
+  draw 8: SVM OA 0.9726 | RF OA 0.9572  (2s)
+  draw 9: SVM OA 0.9618 | RF OA 0.9486  (2s)
+
+                           OA               AA            kappa
+SVM           0.9651 ± 0.0063  0.9169 ± 0.0151  0.9507 ± 0.0087
+RF            0.9489 ± 0.0075  0.8930 ± 0.0167  0.9278 ± 0.0098
+written: paviac_original_blocked.json
+paviac/recon: 148152 labeled px, 102-dim features, 9 classes, split=blocked
+  draw 0: SVM OA 0.9722 | RF OA 0.9651  (3s)
+  draw 1: SVM OA 0.9704 | RF OA 0.9465  (1s)
+  draw 2: SVM OA 0.9745 | RF OA 0.9512  (2s)
+  draw 3: SVM OA 0.9794 | RF OA 0.9458  (2s)
+  draw 4: SVM OA 0.9735 | RF OA 0.9546  (2s)
+  draw 5: SVM OA 0.9643 | RF OA 0.9418  (-0s)
+  draw 6: SVM OA 0.9732 | RF OA 0.9486  (1s)
+  draw 7: SVM OA 0.9695 | RF OA 0.9584  (2s)
+  draw 8: SVM OA 0.9805 | RF OA 0.9630  (2s)
+  draw 9: SVM OA 0.9698 | RF OA 0.9574  (1s)
+
+                           OA               AA            kappa
+SVM           0.9727 ± 0.0045  0.9333 ± 0.0136  0.9614 ± 0.0062
+RF            0.9532 ± 0.0073  0.9046 ± 0.0168  0.9340 ± 0.0097
+written: paviac_recon_blocked.json
+paviac/recon: 148152 labeled px, 102-dim features, 9 classes, split=blocked
+  draw 0: SVM OA 0.9540 | RF OA 0.9354  (3s)
+  draw 1: SVM OA 0.9333 | RF OA 0.9265  (3s)
+  draw 2: SVM OA 0.9512 | RF OA 0.9369  (2s)
+  draw 3: SVM OA 0.9406 | RF OA 0.9147  (2s)
+  draw 4: SVM OA 0.9535 | RF OA 0.9369  (2s)
+  draw 5: SVM OA 0.9488 | RF OA 0.9289  (2s)
+  draw 6: SVM OA 0.9495 | RF OA 0.9191  (2s)
+  draw 7: SVM OA 0.9492 | RF OA 0.9306  (2s)
+  draw 8: SVM OA 0.9612 | RF OA 0.9401  (2s)
+  draw 9: SVM OA 0.9448 | RF OA 0.9291  (2s)
+
+                           OA               AA            kappa
+SVM           0.9486 ± 0.0073  0.8947 ± 0.0196  0.9275 ± 0.0095
+RF            0.9298 ± 0.0077  0.8869 ± 0.0152  0.9016 ± 0.0093
+written: paviac_recon_blocked_jp2.json
+paviac/abundance: 148152 labeled px, 12-dim features, 9 classes, split=blocked
+  draw 0: SVM OA 0.9743 | RF OA 0.9630  (2s)
+  draw 1: SVM OA 0.9747 | RF OA 0.9526  (1s)
+  draw 2: SVM OA 0.9743 | RF OA 0.9583  (1s)
+  draw 3: SVM OA 0.9776 | RF OA 0.9651  (1s)
+  draw 4: SVM OA 0.9688 | RF OA 0.9554  (2s)
+  draw 5: SVM OA 0.9655 | RF OA 0.9414  (1s)
+  draw 6: SVM OA 0.9735 | RF OA 0.9611  (1s)
+  draw 7: SVM OA 0.9735 | RF OA 0.9653  (1s)
+  draw 8: SVM OA 0.9796 | RF OA 0.9680  (1s)
+  draw 9: SVM OA 0.9715 | RF OA 0.9640  (1s)
+
+                           OA               AA            kappa
+SVM           0.9733 ± 0.0038  0.9356 ± 0.0117  0.9622 ± 0.0055
+RF            0.9594 ± 0.0075  0.9107 ± 0.0183  0.9426 ± 0.0104
+written: paviac_abundance_blocked.json
+paviac/a0: 148152 labeled px, 12-dim features, 9 classes, split=blocked
+  draw 0: SVM OA 0.9652 | RF OA 0.9594  (3s)
+  draw 1: SVM OA 0.9649 | RF OA 0.9537  (1s)
+  draw 2: SVM OA 0.9685 | RF OA 0.9543  (1s)
+  draw 3: SVM OA 0.9697 | RF OA 0.9566  (1s)
+  draw 4: SVM OA 0.9728 | RF OA 0.9558  (1s)
+  draw 5: SVM OA 0.9539 | RF OA 0.9382  (1s)
+  draw 6: SVM OA 0.9671 | RF OA 0.9534  (1s)
+  draw 7: SVM OA 0.9637 | RF OA 0.9556  (1s)
+  draw 8: SVM OA 0.9720 | RF OA 0.9538  (1s)
+  draw 9: SVM OA 0.9662 | RF OA 0.9486  (1s)
+
+                           OA               AA            kappa
+SVM           0.9664 ± 0.0050  0.9175 ± 0.0152  0.9524 ± 0.0068
+RF            0.9529 ± 0.0056  0.9036 ± 0.0130  0.9336 ± 0.0075
+written: paviac_a0_blocked.json
+whu_honghu/original: 386693 labeled px, 270-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.7310 | RF OA 0.6369  (58s)
+  draw 1: SVM OA 0.7386 | RF OA 0.6473  (49s)
+  draw 2: SVM OA 0.7286 | RF OA 0.6382  (54s)
+  draw 3: SVM OA 0.7473 | RF OA 0.6770  (56s)
+  draw 4: SVM OA 0.7398 | RF OA 0.6433  (61s)
+  draw 5: SVM OA 0.7049 | RF OA 0.6397  (61s)
+  draw 6: SVM OA 0.7252 | RF OA 0.6457  (59s)
+  draw 7: SVM OA 0.7205 | RF OA 0.6583  (56s)
+  draw 8: SVM OA 0.7358 | RF OA 0.6454  (51s)
+  draw 9: SVM OA 0.6929 | RF OA 0.6014  (56s)
+
+                           OA               AA            kappa
+SVM           0.7265 ± 0.0158  0.6646 ± 0.0113  0.6705 ± 0.0198
+RF            0.6433 ± 0.0179  0.6015 ± 0.0137  0.5796 ± 0.0213
+written: whu_honghu_original_blocked.json
+whu_honghu/recon: 386693 labeled px, 270-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.7368 | RF OA 0.6919  (45s)
+  draw 1: SVM OA 0.7361 | RF OA 0.6699  (37s)
+  draw 2: SVM OA 0.7205 | RF OA 0.6654  (47s)
+  draw 3: SVM OA 0.7541 | RF OA 0.7158  (41s)
+  draw 4: SVM OA 0.7509 | RF OA 0.6849  (43s)
+  draw 5: SVM OA 0.7251 | RF OA 0.6852  (43s)
+  draw 6: SVM OA 0.7099 | RF OA 0.6696  (42s)
+  draw 7: SVM OA 0.7405 | RF OA 0.6875  (46s)
+  draw 8: SVM OA 0.7239 | RF OA 0.6601  (42s)
+  draw 9: SVM OA 0.7016 | RF OA 0.6338  (41s)
+
+                           OA               AA            kappa
+SVM           0.7299 ± 0.0160  0.6665 ± 0.0059  0.6745 ± 0.0197
+RF            0.6764 ± 0.0209  0.6255 ± 0.0122  0.6154 ± 0.0244
+written: whu_honghu_recon_blocked.json
+whu_honghu/recon: 386693 labeled px, 270-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.8425 | RF OA 0.7681  (40s)
+  draw 1: SVM OA 0.8455 | RF OA 0.7761  (35s)
+  draw 2: SVM OA 0.8702 | RF OA 0.7962  (38s)
+  draw 3: SVM OA 0.8499 | RF OA 0.8033  (38s)
+  draw 4: SVM OA 0.8588 | RF OA 0.8050  (40s)
+  draw 5: SVM OA 0.8481 | RF OA 0.7673  (37s)
+  draw 6: SVM OA 0.8532 | RF OA 0.7938  (35s)
+  draw 7: SVM OA 0.8685 | RF OA 0.7956  (39s)
+  draw 8: SVM OA 0.8563 | RF OA 0.7894  (38s)
+  draw 9: SVM OA 0.8391 | RF OA 0.7441  (37s)
+
+                           OA               AA            kappa
+SVM           0.8532 ± 0.0099  0.7500 ± 0.0178  0.8171 ± 0.0109
+RF            0.7839 ± 0.0184  0.6706 ± 0.0156  0.7348 ± 0.0212
+written: whu_honghu_recon_blocked_jp2.json
+whu_honghu/abundance: 386693 labeled px, 12-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.7271 | RF OA 0.7109  (14s)
+  draw 1: SVM OA 0.7165 | RF OA 0.7060  (14s)
+  draw 2: SVM OA 0.6967 | RF OA 0.7019  (14s)
+  draw 3: SVM OA 0.7367 | RF OA 0.7408  (13s)
+  draw 4: SVM OA 0.7301 | RF OA 0.7265  (14s)
+  draw 5: SVM OA 0.7039 | RF OA 0.7120  (16s)
+  draw 6: SVM OA 0.7194 | RF OA 0.7167  (14s)
+  draw 7: SVM OA 0.7378 | RF OA 0.7163  (16s)
+  draw 8: SVM OA 0.7221 | RF OA 0.7138  (14s)
+  draw 9: SVM OA 0.6711 | RF OA 0.6838  (15s)
+
+                           OA               AA            kappa
+SVM           0.7161 ± 0.0195  0.6547 ± 0.0133  0.6591 ± 0.0218
+RF            0.7129 ± 0.0142  0.6546 ± 0.0105  0.6553 ± 0.0172
+written: whu_honghu_abundance_blocked.json
+whu_honghu/a0: 386693 labeled px, 12-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.6223 | RF OA 0.6330  (17s)
+  draw 1: SVM OA 0.6603 | RF OA 0.6277  (15s)
+  draw 2: SVM OA 0.6360 | RF OA 0.6309  (15s)
+  draw 3: SVM OA 0.6965 | RF OA 0.6690  (16s)
+  draw 4: SVM OA 0.6489 | RF OA 0.6409  (15s)
+  draw 5: SVM OA 0.6304 | RF OA 0.6338  (17s)
+  draw 6: SVM OA 0.6524 | RF OA 0.6449  (15s)
+  draw 7: SVM OA 0.6390 | RF OA 0.6454  (16s)
+  draw 8: SVM OA 0.6367 | RF OA 0.6362  (15s)
+  draw 9: SVM OA 0.6252 | RF OA 0.6039  (16s)
+
+                           OA               AA            kappa
+SVM           0.6448 ± 0.0206  0.5955 ± 0.0111  0.5821 ± 0.0265
+RF            0.6366 ± 0.0155  0.5967 ± 0.0134  0.5730 ± 0.0187
+written: whu_honghu_a0_blocked.json
+SWEEP DONE

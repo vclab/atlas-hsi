@@ -22,7 +22,7 @@ compress, and there is no pretrained model to download.
 ## Installation
 
 ATLAS needs a CUDA GPU. It installs as two packages: the pure-Python `atlas-hsi` and the
-CUDA kernel `atlas-gsplat` (see [its README](atlas-gsplat/README.md)).
+CUDA kernel `atlas-gsplat` (see [its README](https://github.com/vclab/atlas-gsplat)).
 
 ```bash
 # 1. PyTorch built for a specific CUDA version. Pick one you can get a toolkit for
@@ -35,10 +35,10 @@ pip install torch --index-url https://download.pytorch.org/whl/cu124
 pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"
 
 # 3. ATLAS
-pip install atlas-hsi
+pip install "git+https://github.com/vclab/atlas-hsi"
 # optional extras:
-pip install "atlas-hsi[viz]"    # matplotlib plotting helpers
-pip install "atlas-hsi[demo]"   # Streamlit demo app
+pip install "atlas-hsi[viz] @ git+https://github.com/vclab/atlas-hsi"    # matplotlib plotting helpers
+pip install "atlas-hsi[demo] @ git+https://github.com/vclab/atlas-hsi"   # Streamlit demo app
 ```
 
 For local development:
@@ -220,17 +220,28 @@ Test cases live in `tests/testcases.py`.
 3. Quantize and encode. Two-stage QAT applies LSQ+ (FP16 positions, signed Cholesky, unsigned
    abundances), degenerate Gaussians are pruned, and parameters are entropy-coded.
 
+## Reproducing the paper
+
+Appendix B of the paper lists the training configuration behind each rate-distortion
+target. The self-test (`python tests/selftest.py`) trains one operating point per dataset,
+including the three larger scenes of the scaling study, and checks it against recorded
+values in `tests/golden.json`. The downstream classification study (Appendix G) has its
+own folder, [`reproduce/downstream/`](reproduce/downstream/), with the scripts, the
+full command list, and the per-sample records behind every number in its table.
+
 ## Citation
 
 ```bibtex
 @inproceedings{rempel2026atlas,
-  title  = {ATLAS: Hyperspectral Image Compression via Adaptive Transfer of Low-rank Abundance Splatting},
-  author = {Rempel, Jacob},
-  year   = {2026}
+  title     = {{ATLAS}: Hyperspectral Image Compression via Adaptive Transfer of Low-rank Abundance Splatting},
+  author    = {Rempel, Jacob and Qureshi, Faisal Z.},
+  booktitle = {NeurIPS 2026 Workshop on Advances in Representation Learning for Earth Observation (REO-2)},
+  year      = {2026}
 }
 ```
 
-Built on LoR-SGS (Li et al., IEEE TGRS 2025) and GaussianImage++ (Li et al., AAAI 2026).
+Built on LoR-SGS (Li et al., IEEE TGRS 2025), which builds on GaussianImage (Zhang et al.,
+ECCV 2024), and ports techniques from GaussianImage++ (Li et al., AAAI 2026).
 
 ## License
 

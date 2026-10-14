@@ -10,6 +10,18 @@ repository-code: "https://github.com/vclab/atlas-hsi"
 license: MIT
 version: 0.1.0
 date-released: 2026-09-03
+preferred-citation:
+  type: conference-paper
+  title: "ATLAS: Hyperspectral Image Compression via Adaptive Transfer of Low-rank Abundance Splatting"
+  authors:
+    - family-names: Rempel
+      given-names: Jacob
+      affiliation: "Ontario Tech University"
+    - family-names: Qureshi
+      given-names: Faisal Z.
+      affiliation: "Ontario Tech University"
+  collection-title: "NeurIPS 2026 Workshop on Advances in Representation Learning for Earth Observation (REO-2)"
+  year: 2026
 keywords:
   - hyperspectral
   - image compression

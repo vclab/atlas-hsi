@@ -29,6 +29,8 @@ checkpoints/
 
 # --- Training / run outputs ---
 atlas_runs/
+# Regenerated inputs for the paper's downstream evaluation (about 2 GB)
+/reproduce/downstream/recons/
 examples/init/
 examples/atlas_runs/
 

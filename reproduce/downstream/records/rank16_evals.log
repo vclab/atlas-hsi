@@ -1,0 +1,65 @@
+whu_honghu/abundance: 386693 labeled px, 16-dim features, 22 classes, split=random
+  draw 0: SVM OA 0.7788 | RF OA 0.7725  (33s)
+  draw 1: SVM OA 0.7897 | RF OA 0.7770  (27s)
+  draw 2: SVM OA 0.7608 | RF OA 0.7606  (29s)
+  draw 3: SVM OA 0.7694 | RF OA 0.7583  (29s)
+  draw 4: SVM OA 0.7691 | RF OA 0.7784  (28s)
+  draw 5: SVM OA 0.7630 | RF OA 0.7669  (29s)
+  draw 6: SVM OA 0.7748 | RF OA 0.7686  (30s)
+  draw 7: SVM OA 0.7626 | RF OA 0.7640  (29s)
+  draw 8: SVM OA 0.7712 | RF OA 0.7781  (25s)
+  draw 9: SVM OA 0.7675 | RF OA 0.7712  (30s)
+
+                           OA               AA            kappa
+SVM           0.7707 ± 0.0083  0.7622 ± 0.0047  0.7214 ± 0.0090
+RF            0.7695 ± 0.0068  0.7565 ± 0.0031  0.7200 ± 0.0074
+written: whu_honghu_abundance_rank16.json
+whu_honghu/abundance: 386693 labeled px, 16-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.7506 | RF OA 0.7463  (16s)
+  draw 1: SVM OA 0.7440 | RF OA 0.7493  (15s)
+  draw 2: SVM OA 0.7431 | RF OA 0.7418  (13s)
+  draw 3: SVM OA 0.7736 | RF OA 0.7675  (16s)
+  draw 4: SVM OA 0.7617 | RF OA 0.7678  (12s)
+  draw 5: SVM OA 0.7375 | RF OA 0.7405  (16s)
+  draw 6: SVM OA 0.7479 | RF OA 0.7596  (14s)
+  draw 7: SVM OA 0.7577 | RF OA 0.7617  (15s)
+  draw 8: SVM OA 0.7455 | RF OA 0.7504  (15s)
+  draw 9: SVM OA 0.7324 | RF OA 0.7225  (13s)
+
+                           OA               AA            kappa
+SVM           0.7494 ± 0.0115  0.6844 ± 0.0167  0.6967 ± 0.0154
+RF            0.7507 ± 0.0133  0.6877 ± 0.0131  0.6984 ± 0.0157
+written: whu_honghu_abundance_blocked_rank16.json
+whu_honghu/a0: 386693 labeled px, 16-dim features, 22 classes, split=random
+  draw 0: SVM OA 0.6927 | RF OA 0.6833  (31s)
+  draw 1: SVM OA 0.6862 | RF OA 0.6975  (32s)
+  draw 2: SVM OA 0.6765 | RF OA 0.6840  (31s)
+  draw 3: SVM OA 0.6759 | RF OA 0.6838  (31s)
+  draw 4: SVM OA 0.6819 | RF OA 0.6956  (31s)
+  draw 5: SVM OA 0.6997 | RF OA 0.6856  (30s)
+  draw 6: SVM OA 0.6856 | RF OA 0.6773  (30s)
+  draw 7: SVM OA 0.6525 | RF OA 0.6780  (31s)
+  draw 8: SVM OA 0.7066 | RF OA 0.7030  (30s)
+  draw 9: SVM OA 0.6811 | RF OA 0.6838  (31s)
+
+                           OA               AA            kappa
+SVM           0.6839 ± 0.0140  0.6514 ± 0.0027  0.6233 ± 0.0141
+RF            0.6872 ± 0.0081  0.6554 ± 0.0024  0.6258 ± 0.0081
+written: whu_honghu_a0_rank16.json
+whu_honghu/a0: 386693 labeled px, 16-dim features, 22 classes, split=blocked
+  draw 0: SVM OA 0.6566 | RF OA 0.6638  (16s)
+  draw 1: SVM OA 0.6825 | RF OA 0.6784  (16s)
+  draw 2: SVM OA 0.6532 | RF OA 0.6566  (17s)
+  draw 3: SVM OA 0.7141 | RF OA 0.6998  (14s)
+  draw 4: SVM OA 0.6699 | RF OA 0.6895  (18s)
+  draw 5: SVM OA 0.6554 | RF OA 0.6573  (16s)
+  draw 6: SVM OA 0.6861 | RF OA 0.6884  (17s)
+  draw 7: SVM OA 0.6614 | RF OA 0.6755  (15s)
+  draw 8: SVM OA 0.6586 | RF OA 0.6640  (17s)
+  draw 9: SVM OA 0.6549 | RF OA 0.6388  (15s)
+
+                           OA               AA            kappa
+SVM           0.6693 ± 0.0186  0.6089 ± 0.0111  0.6078 ± 0.0249
+RF            0.6712 ± 0.0175  0.6191 ± 0.0131  0.6094 ± 0.0213
+written: whu_honghu_a0_blocked_rank16.json
+RANK16 DONE
