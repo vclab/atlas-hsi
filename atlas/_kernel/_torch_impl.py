@@ -325,29 +325,17 @@ def map_gaussian_to_intersects(
     return isect_ids, gaussian_ids
 
 
-def get_tile_bin_edges(num_intersects, isect_ids_sorted):
+def get_tile_bin_edges(num_intersects, isect_ids_sorted, tile_bounds):
+    """Reference: one [start, end) row per tile; tiles with no intersections stay [0, 0)."""
+    num_tiles = tile_bounds[0] * tile_bounds[1]
     tile_bins = torch.zeros(
-        (num_intersects, 2), dtype=torch.int32, device=isect_ids_sorted.device
+        (num_tiles, 2), dtype=torch.int32, device=isect_ids_sorted.device
     )
-
-    for idx in range(num_intersects):
-
-        cur_tile_idx = isect_ids_sorted[idx] >> 32
-
-        if idx == 0:
-            tile_bins[cur_tile_idx, 0] = 0
-            continue
-
-        if idx == num_intersects - 1:
-            tile_bins[cur_tile_idx, 1] = num_intersects
-            break
-
-        prev_tile_idx = isect_ids_sorted[idx - 1] >> 32
-
-        if cur_tile_idx != prev_tile_idx:
-            tile_bins[prev_tile_idx, 1] = idx
-            tile_bins[cur_tile_idx, 0] = idx
-
+    tile_ids = (isect_ids_sorted >> 32).tolist()
+    for idx, tile in enumerate(tile_ids):
+        if idx == 0 or tile_ids[idx - 1] != tile:
+            tile_bins[tile, 0] = idx  # first intersection of this tile
+        tile_bins[tile, 1] = idx + 1  # one past the last one seen so far
     return tile_bins
 
 

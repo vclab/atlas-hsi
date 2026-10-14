@@ -75,10 +75,34 @@ def test_get_tile_bin_edges():
     _isect_ids_sorted = sorted_values
     _gaussian_ids_sorted = torch.gather(_gaussian_ids_unsorted, 0, sorted_indices)
 
-    _tile_bins = _torch_impl.get_tile_bin_edges(_num_intersects, _isect_ids_sorted)
-    tile_bins = get_tile_bin_edges(_num_intersects, _isect_ids_sorted)
+    _tile_bins = _torch_impl.get_tile_bin_edges(
+        _num_intersects, _isect_ids_sorted, tile_bounds
+    )
+    tile_bins = get_tile_bin_edges(_num_intersects, _isect_ids_sorted, tile_bounds)
 
+    assert tile_bins.shape == (tile_bounds[0] * tile_bounds[1], 2)
     torch.testing.assert_close(_tile_bins, tile_bins)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device")
+def test_get_tile_bin_edges_fewer_intersections_than_tiles():
+    """Regression: 3 intersections on a 4 x 3 tile grid, two of them in the last tile."""
+    from atlas_gsplat import _torch_impl
+    from atlas_gsplat import get_tile_bin_edges
+
+    tile_bounds = (4, 3, 1)
+    tiles = torch.tensor([2, 11, 11], device=device, dtype=torch.int64)
+    isect_ids_sorted = tiles << 32
+    expected = torch.zeros((12, 2), dtype=torch.int32, device=device)
+    expected[2] = torch.tensor([0, 1])
+    expected[11] = torch.tensor([1, 3])
+
+    reference = _torch_impl.get_tile_bin_edges(3, isect_ids_sorted, tile_bounds)
+    tile_bins = get_tile_bin_edges(3, isect_ids_sorted, tile_bounds)
+
+    torch.testing.assert_close(reference, expected)
+    torch.testing.assert_close(tile_bins, expected)
+    assert tile_bins.is_contiguous()
 
 
 if __name__ == "__main__":
