@@ -34,7 +34,6 @@ dependencies = [
     "tqdm",
     "scikit-learn",   # NMF endmember initialization
     "ninja",          # compiles the CUDA kernel on first use
-    "jaxtyping",      # kernel type annotations
     "rich",           # first-compile progress message
 ]
 
@@ -80,11 +79,6 @@ extend-exclude = [
     "GaussianImage_plus", "paper", "paper_figures", "references", "webpage",
     "atlas-gsplat", "newvenv",
 ]
-
-[tool.ruff.lint.per-file-ignores]
-# The kernel's Python wrappers come from gsplat. F722/F821 are false positives on
-# jaxtyping's string dimension annotations; the rest is upstream style.
-"atlas/_kernel/*" = ["F722", "F821", "E501", "UP006", "UP035"]
 
 [tool.ruff.lint]
 # E/F (pyflakes+pycodestyle), I (import sort), UP (pyupgrade), B (bugbear).

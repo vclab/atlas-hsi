@@ -1,8 +1,6 @@
-"""Python bindings for 3D gaussian projection"""
+"""Project 2D Gaussians onto the image: pixel centers, radii, conics, and tiles hit."""
 
-from typing import Tuple
 
-from jaxtyping import Float
 from torch import Tensor
 from torch.autograd import Function
 
@@ -10,42 +8,33 @@ from . import cuda as _C
 
 
 def project_gaussians_2d(
-    means2d: Float[Tensor, "*batch 2"],
-    L_elements: Float[Tensor, "*batch 3"],
+    means2d: Tensor,
+    L_elements: Tensor,
     img_height: int,
     img_width: int,
-    tile_bounds: Tuple[int, int, int],
+    tile_bounds: tuple[int, int, int],
     clip_thresh: float = 0.01,
-) -> Tuple[Tensor, Tensor, Tensor, Tensor, int]:
-    """This function projects 3D gaussians to 2D using the EWA splatting method for gaussian splatting.
-
-    Note:
-        This function is differentiable w.r.t the means3d, scales and quats inputs.
+) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
+    """Project N 2D Gaussians onto the pixel grid. Differentiable in ``means2d`` and
+    ``L_elements``.
 
     Args:
-       means3d (Tensor): xyzs of gaussians.
-       scales (Tensor): scales of the gaussians.
-       glob_scale (float): A global scaling factor applied to the scene.
-       quats (Tensor): rotations in quaternion [w,x,y,z] format.
-       viewmat (Tensor): view matrix for rendering.
-       projmat (Tensor): projection matrix for rendering.
-       fx (float): focal length x.
-       fy (float): focal length y.
-       cx (float): principal point x.
-       cy (float): principal point y.
-       img_height (int): height of the rendered image.
-       img_width (int): width of the rendered image.
-       tile_bounds (Tuple): tile dimensions as a len 3 tuple (tiles.x , tiles.y, 1).
-       clip_thresh (float): minimum z depth threshold.
+        means2d: (N, 2) float32 centers in normalized coordinates [-1, 1]; the pixel
+            center is ``0.5 * W * (x + 1)``, likewise for y with H.
+        L_elements: (N, 3) float32 Cholesky factor ``(l11, l21, l22)`` of each covariance,
+            ``Sigma = L L^T`` with ``L = [[l11, 0], [l21, l22]]``.
+        img_height: image height H in pixels.
+        img_width: image width W in pixels.
+        tile_bounds: ``(tiles_x, tiles_y, 1)``, the grid of 16 x 16 pixel tiles.
+        clip_thresh: unused by the 2D kernel; kept so the call signature is unchanged.
 
     Returns:
-        A tuple of {Tensor, Tensor, Tensor, Tensor, Tensor, Tensor}:
-
-        - **xys** (Tensor): x,y locations of 2D gaussian projections.
-        - **depths** (Tensor): z depth of gaussians.
-        - **radii** (Tensor): radii of 2D gaussian projections.
-        - **conics** (Tensor): conic parameters for 2D gaussian.
-        - **num_tiles_hit** (Tensor): number of tiles hit per gaussian.
+        xys: (N, 2) float32 pixel-space centers.
+        depths: (N,) float32, always 0 (2D Gaussians have no depth).
+        radii: (N,) int32 pixel radius at 3 sigma; 0 means off-screen or degenerate, and
+            such Gaussians are skipped by every later step.
+        conics: (N, 3) float32 inverse covariance ``(a, b, c)`` of ``[[a, b], [b, c]]``.
+        num_tiles_hit: (N,) int32 number of tiles each Gaussian overlaps.
     """
     return _ProjectGaussians2d.apply(
         means2d.contiguous(),
@@ -57,16 +46,16 @@ def project_gaussians_2d(
     )
 
 class _ProjectGaussians2d(Function):
-    """Project 3D gaussians to 2D."""
+    """Autograd function behind :func:`project_gaussians_2d`."""
 
     @staticmethod
     def forward(
         ctx,
-        means2d: Float[Tensor, "*batch 2"],
-        L_elements: Float[Tensor, "*batch 3"],
+        means2d: Tensor,
+        L_elements: Tensor,
         img_height: int,
         img_width: int,
-        tile_bounds: Tuple[int, int, int],
+        tile_bounds: tuple[int, int, int],
         clip_thresh: float = 0.01,
     ):
         num_points = means2d.shape[-2]
@@ -126,16 +115,16 @@ class _ProjectGaussians2d(Function):
 
         # Return a gradient for each input.
         return (
-            # means3d: Float[Tensor, "*batch 3"],
+            # means2d
             v_mean2d,
-            # scales: Float[Tensor, "*batch 3"],
+            # L_elements
             v_L_elements,
-            # img_height: int,
+            # img_height
             None,
-            # img_width: int,
+            # img_width
             None,
-            # tile_bounds: Tuple[int, int, int],
+            # tile_bounds
             None,
-            # clip_thresh,
+            # clip_thresh
             None,
         )

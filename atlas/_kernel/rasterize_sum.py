@@ -1,9 +1,8 @@
-"""Python bindings for custom Cuda functions"""
+"""N-channel sum rasterizer: splat Gaussian coefficients into an (H, W, C) image."""
 
 from typing import Optional
 
 import torch
-from jaxtyping import Float, Int
 from torch import Tensor
 from torch.autograd import Function
 
@@ -12,47 +11,39 @@ from .utils import bin_and_sort_gaussians, compute_cumulative_intersects
 
 
 def rasterize_gaussians_sum_general(
-    xys: Float[Tensor, "*batch 2"],
-    depths: Float[Tensor, "*batch 1"],
-    radii: Float[Tensor, "*batch 1"],
-    conics: Float[Tensor, "*batch 3"],
-    num_tiles_hit: Int[Tensor, "*batch 1"],
-    colors: Float[Tensor, "*batch channels"],
-    opacity: Float[Tensor, "*batch 1"],
+    xys: Tensor,
+    depths: Tensor,
+    radii: Tensor,
+    conics: Tensor,
+    num_tiles_hit: Tensor,
+    colors: Tensor,
+    opacity: Tensor,
     img_height: int,
     img_width: int,
     BLOCK_H: int=16,
     BLOCK_W: int=16,
-    background: Optional[Float[Tensor, "channels"]] = None,
+    background: Optional[Tensor] = None,
     return_alpha: Optional[bool] = False,
 ) -> Tensor:
-    """Rasterizes 2D gaussians by sorting and binning gaussian intersections for each tile.
-
-    General unified kernel that handles arbitrary channel dimensions in one pass.
-
-    Note:
-        This function is differentiable w.r.t the xys, conics, colors, and opacity inputs.
+    """Splat N Gaussians into an (H, W, C) image: each pixel sums every overlapping
+    Gaussian's C coefficients, weighted by its kernel value and opacity. Differentiable in
+    ``xys``, ``conics``, ``colors``, and ``opacity``.
 
     Args:
-        xys (Tensor): xy coords of 2D gaussians.
-        depths (Tensor): depths of 2D gaussians.
-        radii (Tensor): radii of 2D gaussians
-        conics (Tensor): conics (inverse of covariance) of 2D gaussians in upper triangular format
-        num_tiles_hit (Tensor): number of tiles hit per gaussian
-        colors (Tensor): N-dimensional features associated with the gaussians.
-        opacity (Tensor): opacity associated with the gaussians.
-        img_height (int): height of the rendered image.
-        img_width (int): width of the rendered image.
-        BLOCK_H (int): tile height for rasterization.
-        BLOCK_W (int): tile width for rasterization.
-        background (Tensor): background color
-        return_alpha (bool): whether to return alpha channel
+        xys, depths, radii, conics, num_tiles_hit: the outputs of
+            :func:`~atlas._kernel.project_gaussians_2d` (see there for shapes and dtypes).
+        colors: (N, C) float32 per-Gaussian coefficients (ATLAS's abundances), with
+            1 <= C <= 16. A uint8 tensor is converted to float in [0, 1].
+        opacity: (N, 1) float32 per-Gaussian weight.
+        img_height: image height H in pixels.
+        img_width: image width W in pixels.
+        BLOCK_H, BLOCK_W: tile size; must be 16, the size the kernel is compiled for.
+        background: optional (C,) float32, default ones. The sum kernel does not add it;
+            it only fills the image when no Gaussian overlaps any tile.
+        return_alpha: also return the (H, W) float32 alpha map, ``1 - transmittance``.
 
     Returns:
-        A Tensor:
-
-        - **out_img** (Tensor): N-dimensional rendered output image.
-        - **out_alpha** (Optional[Tensor]): Alpha channel of the rendered output image.
+        (H, W, C) float32 image, or ``(image, alpha)`` when ``return_alpha`` is set.
     """
     if colors.dtype == torch.uint8:
         # make sure colors are float [0,1]
@@ -91,23 +82,23 @@ def rasterize_gaussians_sum_general(
 
 
 class _RasterizeGaussiansSumGeneral(Function):
-    """Rasterizes 2D gaussians using general unified kernel for arbitrary channels"""
+    """Autograd function behind :func:`rasterize_gaussians_sum_general`."""
 
     @staticmethod
     def forward(
         ctx,
-        xys: Float[Tensor, "*batch 2"],
-        depths: Float[Tensor, "*batch 1"],
-        radii: Float[Tensor, "*batch 1"],
-        conics: Float[Tensor, "*batch 3"],
-        num_tiles_hit: Int[Tensor, "*batch 1"],
-        colors: Float[Tensor, "*batch channels"],
-        opacity: Float[Tensor, "*batch 1"],
+        xys: Tensor,
+        depths: Tensor,
+        radii: Tensor,
+        conics: Tensor,
+        num_tiles_hit: Tensor,
+        colors: Tensor,
+        opacity: Tensor,
         img_height: int,
         img_width: int,
         BLOCK_H: int=16,
         BLOCK_W: int=16,
-        background: Optional[Float[Tensor, "channels"]] = None,
+        background: Optional[Tensor] = None,
         return_alpha: Optional[bool] = False,
     ) -> Tensor:
         num_points = xys.size(0)
