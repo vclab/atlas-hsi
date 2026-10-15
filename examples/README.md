@@ -41,7 +41,7 @@ PSNR (about 35-37 dB) and bpppb are the meaningful numbers here.
 
 ## Inspect it (no GPU needed)
 
-With the `[viz]` extra (`pip install "atlas-hsi[viz] @ git+https://github.com/vclab/atlas-hsi"`):
+With the `[viz]` extra (`pip install "atlas-hsi[viz]"`):
 
 ```python
 import atlas

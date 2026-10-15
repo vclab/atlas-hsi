@@ -26,14 +26,17 @@ automatically the first time you train or decode, which takes about a minute and
 CUDA toolkit (`nvcc`). Later runs reuse the compiled kernel.
 
 ```bash
-# 1. PyTorch 2.10 or newer, built for CUDA (here, CUDA 13.0)
+# 1. PyTorch 2.10 or newer, built for your CUDA version (here, CUDA 13.0)
 pip install torch --index-url https://download.pytorch.org/whl/cu130
 
 # 2. ATLAS (also installs ninja, which compiles the kernel)
-pip install "git+https://github.com/vclab/atlas-hsi"
+pip install atlas-hsi
 # optional extras:
-pip install "atlas-hsi[viz] @ git+https://github.com/vclab/atlas-hsi"    # matplotlib plotting helpers
-pip install "atlas-hsi[demo] @ git+https://github.com/vclab/atlas-hsi"   # Streamlit demo app
+pip install "atlas-hsi[viz]"    # matplotlib plotting helpers
+pip install "atlas-hsi[demo]"   # Streamlit demo app
+
+# or the latest development version from GitHub:
+pip install "git+https://github.com/vclab/atlas-hsi"
 ```
 
 For local development:
