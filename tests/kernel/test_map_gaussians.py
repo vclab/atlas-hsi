@@ -1,77 +1,21 @@
+"""map_gaussian_to_intersects (CUDA) against the plain-PyTorch reference."""
 import pytest
-import torch
+
+torch = pytest.importorskip("torch")
 
 
-device = torch.device("cuda:0")
+@pytest.mark.gpu
+def test_map_gaussian_to_intersects_matches_reference():
+    from _reference import map_gaussian_to_intersects as reference
+    from _reference import random_gaussians
 
+    from atlas._kernel import compute_cumulative_intersects, map_gaussian_to_intersects
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="No CUDA device")
-def test_map_gaussians():
-    from atlas_gsplat import _torch_impl
-    from atlas_gsplat import map_gaussian_to_intersects
-
-    torch.manual_seed(42)
-
-    num_points = 100
-
-    means3d = torch.randn((num_points, 3), device=device, requires_grad=True)
-    scales = torch.randn((num_points, 3), device=device)
-    glob_scale = 0.3
-    quats = torch.randn((num_points, 4), device=device)
-    quats /= torch.linalg.norm(quats, dim=-1, keepdim=True)
-    viewmat = torch.eye(4, device=device)
-    projmat = torch.eye(4, device=device)
-    fx, fy = 3.0, 3.0
-    H, W = 512, 512
-    clip_thresh = 0.01
-
-    BLOCK_X, BLOCK_Y = 16, 16
-    tile_bounds = (W + BLOCK_X - 1) // BLOCK_X, (H + BLOCK_Y - 1) // BLOCK_Y, 1
-
-    (
-        _cov3d,
-        _xys,
-        _depths,
-        _radii,
-        _conics,
-        _num_tiles_hit,
-        _masks,
-    ) = _torch_impl.project_gaussians_forward(
-        means3d,
-        scales,
-        glob_scale,
-        quats,
-        viewmat,
-        projmat,
-        fx,
-        fy,
-        (H, W),
-        tile_bounds,
-        clip_thresh,
-    )
-    _xys = _xys[_masks]
-    _depths = _depths[_masks]
-    _radii = _radii[_masks]
-    _conics = _conics[_masks]
-    _num_tiles_hit = _num_tiles_hit[_masks]
-
-    num_points = num_points - torch.count_nonzero(~_masks).item()
-
-    _cum_tiles_hit = torch.cumsum(_num_tiles_hit, dim=0, dtype=torch.int32)
-    _num_intersects = _cum_tiles_hit[-1].item()
-    _depths = _depths.contiguous()
-
-    _isect_ids, _gaussian_ids = _torch_impl.map_gaussian_to_intersects(
-        num_points, _xys, _depths, _radii, _cum_tiles_hit, tile_bounds
-    )
-
+    xys, depths, radii, tiles_hit, tile_bounds = random_gaussians(300, 200, 150)  # non-square
+    num_isect, cum_hit = compute_cumulative_intersects(tiles_hit)
     isect_ids, gaussian_ids = map_gaussian_to_intersects(
-        num_points, _num_intersects, _xys, _depths, _radii, _cum_tiles_hit, tile_bounds
-    )
+        len(radii), num_isect, xys, depths, radii, cum_hit, tile_bounds)
+    ref_isect, ref_gaussian = reference(xys.cpu(), radii.cpu(), cum_hit.cpu(), tile_bounds)
 
-    torch.testing.assert_close(gaussian_ids, _gaussian_ids)
-    torch.testing.assert_close(isect_ids, _isect_ids)
-
-
-if __name__ == "__main__":
-    test_map_gaussians()
+    torch.testing.assert_close(isect_ids.cpu(), ref_isect)
+    torch.testing.assert_close(gaussian_ids.cpu(), ref_gaussian)

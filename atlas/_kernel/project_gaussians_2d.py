@@ -6,7 +6,7 @@ from jaxtyping import Float
 from torch import Tensor
 from torch.autograd import Function
 
-import atlas_gsplat.cuda as _C
+from . import cuda as _C
 
 
 def project_gaussians_2d(

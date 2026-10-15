@@ -1,4 +1,4 @@
-"""Side-effect-free CUDA toolkit detection for atlas-gsplat.
+"""Side-effect-free CUDA toolkit detection for the ATLAS kernel.
 
 Kept separate from ``_backend.py`` so callers (and ATLAS's ``atlas doctor``, and the
 model's import-time kernel check) can probe for a toolkit *without* triggering the JIT
@@ -103,3 +103,20 @@ def cuda_toolkit_version():
         return None
     m = _RELEASE_RE.search(out)
     return m.group(1) if m else None
+
+
+def find_ninja():
+    """Path to the ``ninja`` build tool, or ``None``.
+
+    Looks on PATH first, then in the directory where the pip ``ninja`` package installs
+    its binary (the environment's ``bin``), which is not on PATH when Python runs without
+    activating the environment, as cluster jobs and notebook kernels often do.
+    """
+    found = shutil.which("ninja")
+    if found:
+        return found
+    try:
+        import ninja  # the pip package that ships the binary
+    except ImportError:
+        return None
+    return shutil.which("ninja", path=ninja.BIN_DIR)

@@ -9,9 +9,8 @@ memory access, which is how the quick self-test on Pavia Centre (1,200 Gaussians
 3,105 tiles) found it. Paper configurations never hit it: they start with 10 to 100
 times more Gaussians than tiles.
 
-Auto-skipped without a CUDA GPU + atlas_gsplat (see conftest.py).
+Auto-skipped without a CUDA GPU and the CUDA kernel (see tests/conftest.py).
 """
-import harness
 import pytest
 
 H, W, N = 760, 760, 600  # 48 x 48 = 2,304 tiles, about 1,400 intersections
@@ -31,9 +30,8 @@ def _gaussians(torch, n, device):
 def test_tile_bins_cover_every_tile():
     import torch
 
-    harness._ensure_kernel_on_path()
-    from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
-    from atlas_gsplat.utils import bin_and_sort_gaussians, compute_cumulative_intersects
+    from atlas._kernel.project_gaussians_2d import project_gaussians_2d
+    from atlas._kernel.utils import bin_and_sort_gaussians, compute_cumulative_intersects
 
     tile_bounds = ((W + 15) // 16, (H + 15) // 16, 1)
     num_tiles = tile_bounds[0] * tile_bounds[1]
@@ -56,9 +54,8 @@ def test_tile_bins_cover_every_tile():
 def test_backward_with_fewer_intersections_than_tiles():
     import torch
 
-    harness._ensure_kernel_on_path()
-    from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
-    from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum_general
+    from atlas._kernel.project_gaussians_2d import project_gaussians_2d
+    from atlas._kernel.rasterize_sum import rasterize_gaussians_sum_general
 
     tile_bounds = ((W + 15) // 16, (H + 15) // 16, 1)
     means, chol, colors, opacity = _gaussians(torch, N, "cuda")
