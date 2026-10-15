@@ -117,10 +117,9 @@ def main():
             failures.append("unit (cpu)")
 
     if not harness.gpu_ready():
-        print("\nNo CUDA GPU / atlas_gsplat kernel -> skipping GPU stages "
+        print("\nNo CUDA GPU, or the CUDA kernel cannot load -> skipping GPU stages "
               "(2 integration, 3 datasets).")
-        print("  On the dev box the prebuilt kernel lives in atlas-gsplat/; on a cluster "
-              "`pip install atlas-gsplat`.")
+        print("  Run `atlas doctor` to see what is missing (a CUDA toolkit or ninja).")
         _summary(failures, drifts, skipped, ran, t_start)
         return 1 if failures else 0
 

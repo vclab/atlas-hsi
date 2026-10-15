@@ -21,20 +21,15 @@ compress, and there is no pretrained model to download.
 
 ## Installation
 
-ATLAS needs a CUDA GPU. It installs as two packages: the pure-Python `atlas-hsi` and the
-CUDA kernel `atlas-gsplat` (see [its README](https://github.com/vclab/atlas-gsplat)).
+ATLAS needs a CUDA GPU. Its CUDA kernel ships with the package as source and compiles
+automatically the first time you train or decode, which takes about a minute and needs a
+CUDA toolkit (`nvcc`). Later runs reuse the compiled kernel.
 
 ```bash
-# 1. PyTorch built for a specific CUDA version. Pick one you can get a toolkit for
-#    (here, CUDA 12.4) and note it: step 2 compiles against this CUDA major.
-pip install torch --index-url https://download.pytorch.org/whl/cu124
+# 1. PyTorch 2.10 or newer, built for CUDA (here, CUDA 13.0)
+pip install torch --index-url https://download.pytorch.org/whl/cu130
 
-# 2. The CUDA rasterization kernel. It builds from source, so it needs a CUDA toolkit
-#    (nvcc) of the same major as the torch above (here, CUDA 12.x), and
-#    --no-build-isolation so the build can see that torch (see Troubleshooting).
-pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"
-
-# 3. ATLAS
+# 2. ATLAS (also installs ninja, which compiles the kernel)
 pip install "git+https://github.com/vclab/atlas-hsi"
 # optional extras:
 pip install "atlas-hsi[viz] @ git+https://github.com/vclab/atlas-hsi"    # matplotlib plotting helpers
@@ -49,23 +44,17 @@ pip install -e ".[viz,dev]"
 
 ### Troubleshooting the install
 
-If the kernel will not build, or training cannot find CUDA, run:
+If the kernel will not compile, or training cannot find CUDA, run:
 
 ```bash
 atlas doctor
 ```
 
-It checks your torch build, the detected CUDA toolkit (`nvcc`), and whether `atlas-gsplat`
-is installed, then prints what is wrong. The most common fresh-install trap is a CUDA
-major-version mismatch: torch built for one CUDA major (for example 13.x) while your toolkit
-is another (for example 12.8). The build fails until they agree. `atlas doctor` reports this
-and prints the exact fix. The toolkit is auto-discovered from `CUDA_HOME`, `nvcc` on `PATH`,
-or `/usr/local/cuda*`. Add `--build` to force a real kernel compile and load as a final check.
-
-A second trap shows up while building `atlas-gsplat`: the build fails with
-`ModuleNotFoundError: No module named 'torch'` even though torch is installed. That is pip's
-build isolation hiding your torch from the extension build. Install the kernel with
-`--no-build-isolation` (as shown above) so the compile can see it.
+It checks your torch build, the detected CUDA toolkit (`nvcc`), and `ninja`, then prints
+what is missing. torch and the toolkit should share a CUDA major version (for example
+13.x); a mismatch is reported as a warning, since the first-use compile usually still
+works. The toolkit is auto-discovered from `CUDA_HOME`, `nvcc` on `PATH`, or
+`/usr/local/cuda*`. Add `--build` to compile and load the kernel right away as a final check.
 
 ## Quickstart
 
@@ -208,7 +197,8 @@ bitstream, decodes through the real codec, and reports reconstruction PSNR and `
 case enforces hard floors (PSNR and rate), and checks recorded golden values for drift.
 Refresh the golden values after an intended change with `--record`. Datasets whose cube is
 not in `data/raw/` are skipped, so a new dataset is exercised the moment its file is present.
-The GPU stages need a CUDA device and the `atlas-gsplat` kernel; they are skipped otherwise.
+The GPU stages need a CUDA device and a toolkit to compile the kernel; they are skipped
+otherwise.
 Test cases live in `tests/testcases.py`.
 
 ## How it works
@@ -247,5 +237,5 @@ ECCV 2024), and ports techniques from GaussianImage++ (Li et al., AAAI 2026).
 
 MIT (see `LICENSE`), which also carries the copyright notices of the LoR-SGS and GaussianImage
 code that ATLAS builds on. `atlas/optimizer.py` is the Adan optimizer (Garena Online), licensed
-under Apache-2.0 (see `LICENSE-APACHE`). The `atlas-gsplat` kernel is Apache-2.0 (derived from
-nerfstudio gsplat).
+under Apache-2.0 (see `LICENSE-APACHE`). The CUDA kernel in `atlas/_kernel/` is Apache-2.0, derived from
+nerfstudio gsplat.

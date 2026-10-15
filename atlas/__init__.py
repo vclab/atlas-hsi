@@ -3,7 +3,7 @@
 Hyperspectral image compression via low-rank spectral Gaussian splatting.
 
 The data utilities (`load_cube`, `to_tensor`, ...) import lightly. Training and the
-model are imported lazily because they depend on the CUDA `atlas_gsplat` extension,
+model are imported lazily because they depend on the CUDA kernel in `atlas._kernel`,
 which is not required just to load data or inspect the package.
 """
 __version__ = "0.1.0"

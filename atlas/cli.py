@@ -48,7 +48,7 @@ def _add_train_args(p):
 
 
 def cmd_train(args):
-    from .train import train_nd  # imported here so `atlas init` doesn't require CUDA/atlas_gsplat
+    from .train import train_nd  # imported here so `atlas init` doesn't require CUDA
 
     name = str(args.input)
     key = data.init_key(name)  # matches what `atlas init` wrote (basename stem for paths)
@@ -145,10 +145,10 @@ def main(argv=None):
     p_train.set_defaults(func=cmd_train)
 
     p_doctor = sub.add_parser(
-        "doctor", help="Diagnose the torch / CUDA toolkit / atlas-gsplat environment")
+        "doctor", help="Diagnose the torch / CUDA toolkit / ninja environment")
     p_doctor.add_argument(
         "--build", action="store_true",
-        help="Also force-build/load the atlas-gsplat CUDA kernel (slow; needs a GPU)")
+        help="Also force-build/load the ATLAS CUDA kernel (slow; needs a GPU)")
     p_doctor.set_defaults(func=cmd_doctor)
 
     p_dec = sub.add_parser(

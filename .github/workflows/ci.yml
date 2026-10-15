@@ -21,7 +21,7 @@ jobs:
           cache: pip
 
       # The CPU-testable surface (data / cli-init / viz) needs only these light deps.
-      # torch + the CUDA `atlas-gsplat` kernel power training/model, which require a GPU
+      # torch + the CUDA kernel power training/model, which require a GPU
       # and are validated separately; we install the package with --no-deps to skip them.
       - name: Install
         run: |

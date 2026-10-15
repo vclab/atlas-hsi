@@ -1,7 +1,7 @@
 """Lightweight visualization helpers for ATLAS (the ``[viz]`` extra).
 
 These are pure-Python (numpy + matplotlib) and do **not** require the CUDA
-``atlas_gsplat`` kernel — they operate on the numpy arrays you already have:
+CUDA kernel — they operate on the numpy arrays you already have:
 hyperspectral cubes ``(H, W, C)``, abundance maps, endmember spectra ``(k, C)``,
 and rate–distortion measurements.
 

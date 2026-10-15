@@ -5,7 +5,7 @@ cube, then serializing that trained model to a self-describing binary file (the 
 This script runs the whole loop end to end on one dataset and reports the file size, the
 rate (bpppb), and the reconstruction PSNR.
 
-Needs a CUDA GPU and the atlas-gsplat kernel, and a dataset that `atlas init` has already
+Needs a CUDA GPU (the kernel compiles on first use), and a dataset that `atlas init` has already
 processed (its NMF files under data/init/). Run from the repo root so the data/ paths
 resolve:
 

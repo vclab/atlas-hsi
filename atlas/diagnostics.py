@@ -1,13 +1,10 @@
-"""Environment diagnostics for ATLAS — powers the ``atlas doctor`` command.
+"""Environment diagnostics for ATLAS, behind the ``atlas doctor`` command.
 
-Reports the pieces the CUDA kernel build depends on (torch's CUDA build, a CUDA
-toolkit / ``nvcc``, whether ``atlas-gsplat`` is installed) and flags the most common
-fresh-install trap: torch and the toolkit built for *different CUDA major versions*.
-
-Runs with no GPU, and even without torch or atlas-gsplat installed, so a fresh user can
-diagnose what's missing before attempting a (slow) build. Toolkit detection here mirrors
-``atlas_gsplat.cuda._detect`` but is kept local so ``atlas doctor`` needs neither torch
-nor atlas-gsplat just to find ``nvcc``.
+ATLAS compiles its CUDA kernel on first use. This reports what that needs: torch's CUDA
+build, a CUDA toolkit (``nvcc``), and the ``ninja`` build tool, plus whether a prebuilt
+kernel is present (which needs neither). It runs with no GPU and without torch, so a
+fresh user can see what is missing before the first (slow) compile. Toolkit detection
+mirrors ``atlas._kernel.cuda._detect`` but stays torch-free here.
 """
 from __future__ import annotations
 
@@ -22,10 +19,9 @@ from subprocess import STDOUT, check_output
 
 _RELEASE_RE = re.compile(r"release (\d+\.\d+)")
 _MARK = {"ok": "[ OK ]", "warn": "[WARN]", "error": "[FAIL]", "info": "[INFO]"}
-GSPLAT_REPO = "https://github.com/vclab/atlas-gsplat"
 
 
-# --- CUDA toolkit detection (torch-free, atlas-gsplat-free) ------------------------
+# --- CUDA toolkit detection (torch-free) ------------------------------------------
 
 def _has_nvcc(cuda_home: str | None) -> bool:
     return bool(cuda_home) and os.path.isfile(os.path.join(cuda_home, "bin", "nvcc"))
@@ -95,7 +91,7 @@ def match_status(built_cuda: str | None, toolkit_version: str | None) -> tuple[s
     tj, kj = cuda_major(built_cuda), cuda_major(toolkit_version)
     if tj is None:
         return ("warn",
-                "torch has no CUDA build (CPU-only torch). The atlas-gsplat kernel needs "
+                "torch has no CUDA build (CPU-only torch). The ATLAS CUDA kernel needs "
                 "a CUDA-enabled torch — reinstall it from a CUDA wheel index.")
     if kj is None:
         return ("error",
@@ -105,16 +101,20 @@ def match_status(built_cuda: str | None, toolkit_version: str | None) -> tuple[s
     if tj == kj:
         return ("ok", f"torch CUDA {built_cuda} matches the toolkit ({toolkit_version}).")
     tag = cu_tag(toolkit_version) or "cuXYZ"
-    return ("error",
+    # torch enforces a matching major only for install-time builds (setup.py). The
+    # first-use compile goes through cpp_extension.load, which does not check, and a
+    # 12.8 toolkit with a CUDA 13.0 torch compiled and ran correctly in testing.
+    return ("warn",
             f"CUDA major mismatch: torch is built for {built_cuda} but the toolkit is "
-            f"{toolkit_version}. Building the kernel will fail. Align them. Either:\n"
+            f"{toolkit_version}. The first-use compile usually still works; if it fails, "
+            f"align them. Either:\n"
             f"      (a) match torch to your toolkit:\n"
             f"          pip install torch --index-url "
             f"https://download.pytorch.org/whl/{tag}\n"
             f"      (b) install a CUDA {tj}.x toolkit to match torch.")
 
 
-# --- torch / atlas-gsplat probes ---------------------------------------------------
+# --- torch / kernel probes ---------------------------------------------------------
 
 def torch_report() -> dict:
     """torch version, the CUDA it was built for, and runtime availability. torch-optional."""
@@ -137,37 +137,43 @@ def torch_report() -> dict:
     return info
 
 
-def gsplat_installed() -> bool:
-    """Whether ``atlas_gsplat`` is importable — via ``find_spec``, so no JIT build fires."""
+def find_ninja() -> str | None:
+    """Path to the ``ninja`` build tool, which the first-use kernel compile needs: on PATH,
+    or where the pip ``ninja`` package installs it. Mirrors
+    ``atlas._kernel.cuda._detect.find_ninja`` (kept here so doctor stays torch-free)."""
+    found = shutil.which("ninja")
+    if found:
+        return found
     try:
-        return importlib.util.find_spec("atlas_gsplat") is not None
-    except Exception:
-        return False
+        import ninja
+    except ImportError:
+        return None
+    return shutil.which("ninja", path=ninja.BIN_DIR)
 
 
 def kernel_prebuilt() -> bool:
-    """Whether a prebuilt ``atlas_gsplat.csrc`` C extension is importable. A prebuilt
-    extension runs without any CUDA toolkit, so the torch/toolkit build-match is moot
-    (this mirrors the check in ``atlas.model``)."""
+    """Whether a prebuilt ``atlas._kernel.csrc`` extension is importable. A prebuilt
+    kernel runs without a CUDA toolkit or ninja (this mirrors the check in
+    ``atlas.model``)."""
     try:
-        return importlib.util.find_spec("atlas_gsplat.csrc") is not None
+        return importlib.util.find_spec("atlas._kernel.csrc") is not None
     except Exception:
         return False
 
 
 def probe_kernel_build() -> tuple[str, str]:
-    """Force the atlas-gsplat CUDA extension to load (compiling it if needed).
+    """Force the ATLAS CUDA kernel to load (compiling it if needed).
 
     Heavy: may compile for minutes on first run and needs torch + a GPU. Returns
     ``(level, message)``.
     """
     try:
-        from atlas_gsplat.cuda import _backend
+        from ._kernel.cuda import _backend
     except Exception as e:
-        return ("error", f"atlas-gsplat kernel failed to build/load: {e}")
+        return ("error", f"the ATLAS CUDA kernel failed to build or load: {e}")
     if getattr(_backend, "_C", None) is None:
-        return ("error", "atlas-gsplat kernel did not load (no CUDA toolkit, or build disabled).")
-    return ("ok", "atlas-gsplat CUDA extension compiled and loaded.")
+        return ("error", "the ATLAS CUDA kernel did not load (no CUDA toolkit found).")
+    return ("ok", "the ATLAS CUDA kernel compiled and loaded.")
 
 
 # --- assembly + reporting ----------------------------------------------------------
@@ -185,7 +191,7 @@ def collect() -> dict:
         "torch": torch_info,
         "nvcc": nvcc,
         "toolkit_version": toolkit_version,
-        "gsplat_installed": gsplat_installed(),
+        "ninja": find_ninja(),
         "kernel_prebuilt": kernel_prebuilt(),
         "match_level": level,
         "match_message": message,
@@ -195,29 +201,29 @@ def collect() -> dict:
 def overall_ok(report: dict) -> bool:
     """True when the environment can run the kernel.
 
-    A prebuilt extension runs without a toolkit; otherwise torch and the toolkit must
-    share a CUDA major version so the kernel can be built on first use.
+    A prebuilt kernel needs only a CUDA torch and a GPU. Otherwise the kernel compiles on
+    first use, which needs a toolkit and ninja; a CUDA major mismatch is only a warning.
     """
     t = report["torch"]
-    if not (t.get("installed") and t.get("cuda_available") and report["gsplat_installed"]):
+    if not (t.get("installed") and t.get("cuda_available")):
         return False
-    return report.get("kernel_prebuilt", False) or report["match_level"] == "ok"
+    if report.get("kernel_prebuilt", False):
+        return True
+    return (bool(report.get("nvcc")) and bool(report.get("ninja"))
+            and report["match_level"] != "error")
 
 
 def install_hint(report: dict) -> list[str]:
-    """Copy-pasteable command(s) to install the kernel for *this* environment.
-
-    Leads with a CUDA build of torch when one is missing (the kernel compiles against
-    torch's CUDA), then the kernel itself with ``--no-build-isolation`` so the source
-    build can see that torch. The toolkit prerequisite is covered by ``match_message``.
-    """
+    """Copy-pasteable command(s) for what *this* environment is missing: a CUDA build
+    of torch and the ninja build tool. The toolkit is covered by ``match_message``."""
     t = report["torch"]
     built = t.get("built_cuda") if t.get("installed") else None
     hints: list[str] = []
     if built is None:
-        hints.append("# install a CUDA build of torch first, e.g. for CUDA 12.4:")
-        hints.append("pip install torch --index-url https://download.pytorch.org/whl/cu124")
-    hints.append(f'pip install --no-build-isolation "git+{GSPLAT_REPO}"')
+        hints.append("# install a CUDA build of torch, e.g. for CUDA 13.0:")
+        hints.append("pip install torch --index-url https://download.pytorch.org/whl/cu130")
+    if not report.get("ninja") and not report.get("kernel_prebuilt"):
+        hints.append("pip install ninja")
     return hints
 
 
@@ -241,24 +247,29 @@ def format_report(report: dict) -> str:
         lines.append(f"{_MARK['error']} no CUDA toolkit (nvcc) found on "
                      f"CUDA_HOME / PATH / /usr/local/cuda*")
 
-    if report["gsplat_installed"]:
-        extra = " (prebuilt kernel present)" if report.get("kernel_prebuilt") else ""
-        lines.append(f"{_MARK['ok']} atlas-gsplat installed{extra}")
+    if report.get("kernel_prebuilt"):
+        lines.append(f"{_MARK['ok']} prebuilt CUDA kernel installed, so nothing needs compiling")
+    elif report.get("ninja"):
+        lines.append(f"{_MARK['ok']} ninja at {report['ninja']}; the kernel compiles on first use")
     else:
-        lines.append(f"{_MARK['error']} atlas-gsplat NOT installed; install it with:")
-        lines += [f"       {h}" for h in install_hint(report)]
+        lines.append(f"{_MARK['error']} ninja not found; the kernel compiles on first use "
+                     f"and needs it")
+    hints = install_hint(report)
+    if hints:
+        lines.append("       Install what is missing with:")
+        lines += [f"       {h}" for h in hints]
 
     # A prebuilt kernel runs without the toolkit, so a build-time CUDA mismatch is not
     # fatal — demote it to an informational note instead of a failure.
     if report.get("kernel_prebuilt") and report["match_level"] != "ok":
         lines += ["", f"{_MARK['info']} {report['match_message']}",
-                  f"{_MARK['ok']} a prebuilt atlas-gsplat kernel is installed, so the "
-                  f"toolkit match above only matters if you rebuild from source.", ""]
+                  f"{_MARK['ok']} a prebuilt kernel is installed, so the toolkit "
+                  f"above only matters if you compile from source.", ""]
     else:
         lines += ["", f"{_MARK[report['match_level']]} {report['match_message']}", ""]
 
     if overall_ok(report):
-        lines.append("READY — your environment can run the atlas-gsplat kernel.")
+        lines.append("READY — your environment can run the ATLAS CUDA kernel.")
     else:
         lines.append("NOT READY — resolve the items above, then re-run `atlas doctor`.")
 

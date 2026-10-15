@@ -1,6 +1,6 @@
 #!/bin/bash
 # Regenerate every record in records/ (paper Appendix G). Run from the repository root.
-# Stage 1 needs a CUDA GPU and the atlas-gsplat kernel; WHU-Hi-HongHu needs >= 12 GB VRAM
+# Stage 1 needs a CUDA GPU (the kernel compiles on first use); WHU-Hi-HongHu needs >= 12 GB VRAM
 # (we trained it on an A100). Stage 2 is CPU only. Datasets go in data/raw/ (see README.md).
 set -euo pipefail
 D=reproduce/downstream

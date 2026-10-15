@@ -1,5 +1,5 @@
 """GPU smoke test: the synthetic tiny cube trains, serializes to an ATLAS bitstream, and
-decodes back to a sane reconstruction. Auto-skipped without a CUDA GPU + atlas_gsplat
+decodes back to a sane reconstruction. Auto-skipped without a CUDA GPU and the CUDA kernel
 (see conftest.py). The full multi-dataset matrix lives in tests/selftest.py.
 """
 import harness

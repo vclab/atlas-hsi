@@ -13,7 +13,7 @@ A tiny synthetic hyperspectral cube for verifying your install and running ATLAS
 
 ## Run it
 
-From the repo root, with `atlas` installed (and `atlas-gsplat` for step 2):
+From the repo root, with `atlas` installed (step 2 needs a CUDA GPU):
 
 ```bash
 # 1. NMF initialization. CPU only. Writes endmember and abundance .npy.

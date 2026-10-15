@@ -23,20 +23,19 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 
-# Core runtime deps. NOTE: the CUDA rasterization kernel ships as a SEPARATE
-# distribution (`atlas-gsplat`, a fork of nerfstudio gsplat with 2D splatting
-# functions). It is not yet on PyPI, so install it separately, e.g.:
-#   pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"
-# It is intentionally omitted here so `pip install atlas-hsi` does not fail on
-# machines without a CUDA toolchain (e.g. for data-only / inspection use).
+# Core runtime deps. The CUDA kernel ships as source in atlas/_kernel and compiles on
+# first use, which needs a CUDA toolkit (nvcc) and ninja; installing never compiles.
 dependencies = [
-    "torch",
+    "torch>=2.10",
     "numpy",
     "scipy",
     "constriction",
     "pytorch-msssim",
     "tqdm",
     "scikit-learn",   # NMF endmember initialization
+    "ninja",          # compiles the CUDA kernel on first use
+    "jaxtyping",      # kernel type annotations
+    "rich",           # first-compile progress message
 ]
 
 [project.optional-dependencies]
@@ -54,22 +53,23 @@ Issues = "https://github.com/vclab/atlas-hsi/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-# "atlas*" would also match the sibling atlas-gsplat/ dir (the separately-distributed
-# CUDA kernel) and bundle its sources into this wheel. Match only the atlas package
-# and its subpackages.
 include = ["atlas", "atlas.*"]
-exclude = ["atlas-gsplat*", "tests*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+# The CUDA kernel's sources, compiled on first use.
+"atlas._kernel.cuda" = ["csrc/*.cu", "csrc/*.cuh", "csrc/*.h", "csrc/*.cpp"]
 
 [tool.pytest.ini_options]
 markers = [
-    "gpu: requires a CUDA GPU and the atlas_gsplat kernel (auto-skipped without them)",
+    "gpu: requires a CUDA GPU and the ATLAS CUDA kernel (auto-skipped without them)",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py39"
 # Lint scope is the package surface (atlas/ + tests/ + examples/). The research
-# workspace dirs and the separately-distributed CUDA kernel are not linted here.
+# workspace dirs (and the old atlas-gsplat checkout) are not linted here.
 # The four atlas/ entries are faithful ports of the LoR-SGS numeric core, kept
 # verbatim for reproducibility (they predate this package's style).
 extend-exclude = [
@@ -78,6 +78,11 @@ extend-exclude = [
     "GaussianImage_plus", "paper", "paper_figures", "references", "webpage",
     "atlas-gsplat", "newvenv",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# The kernel's Python wrappers come from gsplat. F722/F821 are false positives on
+# jaxtyping's string dimension annotations; the rest is upstream style.
+"atlas/_kernel/*" = ["F722", "F821", "E501", "UP006", "UP035"]
 
 [tool.ruff.lint]
 # E/F (pyflakes+pycodestyle), I (import sort), UP (pyupgrade), B (bugbear).

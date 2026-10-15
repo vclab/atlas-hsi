@@ -1,41 +1,33 @@
-try:
-    from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
-    from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum_general
-except ImportError as _kernel_import_error:
-    raise ImportError(
-        "ATLAS needs the CUDA kernel package `atlas-gsplat`, which is not installed.\n"
-        '  pip install --no-build-isolation "git+https://github.com/vclab/atlas-gsplat"\n'
-        "  (needs a CUDA toolkit matching your torch build; run `atlas doctor` to check)\n"
-        f"original import error: {_kernel_import_error}"
-    ) from _kernel_import_error
+from ._kernel.project_gaussians_2d import project_gaussians_2d
+from ._kernel.rasterize_sum import rasterize_gaussians_sum_general
 
 
-def _require_atlas_gsplat_kernel():
-    """Fail clearly *now* if the atlas-gsplat CUDA extension can't load, instead of a
-    cryptic ``'NoneType' object has no attribute ...`` deep in the forward pass.
+def _require_kernel():
+    """Fail clearly *now* if the CUDA kernel cannot load, instead of a cryptic
+    ``'NoneType' object has no attribute ...`` deep in the forward pass.
 
-    Cheap: uses ``find_spec`` + toolkit detection, so it does not trigger the (slow)
-    JIT build itself — that still happens lazily on the first real kernel call.
+    Cheap: checks for a prebuilt kernel, a CUDA toolkit, and ninja without compiling
+    anything; the first-use compile still happens lazily on the first kernel call.
     """
     import importlib.util
 
-    # A prebuilt C extension (`pip install atlas-gsplat`) works without a toolkit.
-    if importlib.util.find_spec("atlas_gsplat.csrc") is not None:
-        return
-    try:
-        from atlas_gsplat.cuda._detect import cuda_toolkit_available
-    except Exception:
-        return  # older atlas-gsplat without _detect — let the first kernel call decide
+    if importlib.util.find_spec("atlas._kernel.csrc") is not None:
+        return  # a prebuilt kernel needs neither a toolkit nor ninja
+    from ._kernel.cuda._detect import cuda_toolkit_available, find_ninja
+
+    missing = []
     if not cuda_toolkit_available():
+        missing.append("a CUDA toolkit (nvcc)")
+    if find_ninja() is None:
+        missing.append("ninja (`pip install ninja`)")
+    if missing:
         raise ImportError(
-            "atlas-gsplat is installed but its CUDA kernel cannot load: there is no "
-            "prebuilt extension and no CUDA toolkit (nvcc) was found to compile it. "
-            "Install a CUDA toolkit (the kernel then builds on first use), or reinstall "
-            "atlas-gsplat from source on a CUDA machine. Run `atlas doctor` for details."
+            "ATLAS compiles its CUDA kernel on first use, but this environment is missing "
+            + " and ".join(missing) + ". Run `atlas doctor` for details."
         )
 
 
-_require_atlas_gsplat_kernel()
+_require_kernel()
 from .utils import *
 import torch
 import torch.nn as nn

@@ -1,6 +1,6 @@
 """Tests for `atlas doctor` diagnostics — the version/match logic and toolkit scan.
 
-All torch-free, GPU-free, and atlas-gsplat-free so they run anywhere (incl. CI).
+All torch-free and GPU-free so they run anywhere (incl. CI).
 """
 from atlas import diagnostics as dx
 
@@ -30,8 +30,9 @@ def test_match_ok_same_major_minor_differs():
 
 
 def test_match_major_mismatch_recommends_matching_tag():
+    # Only a warning: the first-use compile does not enforce a matching major.
     level, msg = dx.match_status("13.0", "12.8")
-    assert level == "error"
+    assert level == "warn"
     assert "mismatch" in msg.lower()
     assert "cu128" in msg  # recommend torch built for the installed toolkit
 
@@ -78,20 +79,21 @@ def test_find_nvcc_honors_cuda_home(tmp_path, monkeypatch):
     assert found == str(tmp_path / "bin" / "nvcc")
 
 
-def test_gsplat_installed_returns_bool():
-    # atlas-gsplat is not installed in this env; just assert a clean bool, no build.
-    assert isinstance(dx.gsplat_installed(), bool)
+def test_find_ninja_returns_path_or_none():
+    found = dx.find_ninja()
+    assert found is None or isinstance(found, str)
 
 
 def test_overall_ok():
     ready = {
         "torch": {"installed": True, "cuda_available": True},
-        "gsplat_installed": True,
+        "nvcc": "/usr/local/cuda/bin/nvcc", "ninja": "/usr/bin/ninja",
         "match_level": "ok",
     }
     assert dx.overall_ok(ready) is True
-    not_ready = dict(ready, gsplat_installed=False)
-    assert dx.overall_ok(not_ready) is False
+    assert dx.overall_ok(dict(ready, match_level="warn")) is True    # major mismatch
+    assert dx.overall_ok(dict(ready, ninja=None)) is False
+    assert dx.overall_ok(dict(ready, nvcc=None, match_level="error")) is False
 
 
 def test_kernel_prebuilt_returns_bool():
@@ -102,13 +104,14 @@ def test_overall_ok_prebuilt_kernel_overrides_build_mismatch():
     # A prebuilt extension runs even when torch and the toolkit disagree on CUDA major.
     base = {
         "torch": {"installed": True, "cuda_available": True},
-        "gsplat_installed": True,
+        "nvcc": None, "ninja": None,
         "match_level": "error",
     }
     assert dx.overall_ok(base) is False                       # no prebuilt kernel → must build
     assert dx.overall_ok(dict(base, kernel_prebuilt=True)) is True
     # but a prebuilt kernel cannot save a missing GPU / torch
-    assert dx.overall_ok(dict(base, kernel_prebuilt=True, gsplat_installed=False)) is False
+    no_gpu = {"installed": True, "cuda_available": False}
+    assert dx.overall_ok(dict(base, kernel_prebuilt=True, torch=no_gpu)) is False
 
 
 def test_format_report_prebuilt_demotes_mismatch_to_ready():
@@ -117,7 +120,7 @@ def test_format_report_prebuilt_demotes_mismatch_to_ready():
         "torch": {"installed": True, "version": "2.11.0+cu130", "built_cuda": "13.0",
                   "cuda_available": True, "device": "RTX 3080"},
         "nvcc": "/usr/local/cuda-12.8/bin/nvcc", "toolkit_version": "12.8",
-        "gsplat_installed": True, "kernel_prebuilt": True,
+        "ninja": None, "kernel_prebuilt": True,
         "match_level": "error", "match_message": "CUDA major mismatch: ...",
     }
     text = dx.format_report(report)
@@ -133,7 +136,7 @@ def test_format_report_smoke():
                   "cuda_available": True, "device": "RTX 3080"},
         "nvcc": "/usr/local/cuda-12.8/bin/nvcc",
         "toolkit_version": "12.8",
-        "gsplat_installed": True,
+        "ninja": "/usr/bin/ninja",
         "match_level": "ok",
         "match_message": "torch CUDA 12.8 matches the toolkit (12.8).",
     }
@@ -147,6 +150,6 @@ def test_format_report_smoke():
 def test_collect_has_expected_keys():
     report = dx.collect()
     for key in ("python", "platform", "torch", "nvcc", "toolkit_version",
-                "gsplat_installed", "match_level", "match_message"):
+                "ninja", "match_level", "match_message"):
         assert key in report
     assert report["match_level"] in ("ok", "warn", "error")

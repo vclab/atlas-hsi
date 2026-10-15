@@ -21,7 +21,6 @@ import testcases
 REPO = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO / "data" / "raw"
 INIT_DIR = REPO / "data" / "init"
-KERNEL_DIR = REPO / "atlas-gsplat"
 GOLDEN_PATH = Path(__file__).resolve().parent / "golden.json"
 
 # Make the in-repo `atlas/` package importable when driven from a script, independent of
@@ -75,22 +74,21 @@ def _preload_nvrtc_builtins() -> None:
             return
 
 
-def _ensure_kernel_on_path() -> None:
-    """Make the local atlas-gsplat checkout importable when the wheel isn't installed
-    (the dev box ships a prebuilt csrc.so there; on a cluster you'd pip install it)."""
-    if importlib.util.find_spec("atlas_gsplat") is None and KERNEL_DIR.is_dir():
-        sys.path.insert(0, str(KERNEL_DIR))
+def _prepare_cuda() -> None:
+    """CUDA setup before any kernel call. The kernel ships inside ``atlas`` now, so only
+    the nvrtc preload remains (see ``_preload_nvrtc_builtins``)."""
     _preload_nvrtc_builtins()
 
 
 def gpu_ready() -> bool:
-    """True iff torch sees a CUDA device and the atlas_gsplat kernel imports."""
-    _ensure_kernel_on_path()
+    """True iff torch sees a CUDA device and the kernel can load: prebuilt, or a toolkit
+    and ninja to compile it on first use. Cheap: does not trigger the compile."""
+    _prepare_cuda()
     try:
         import torch
         if not torch.cuda.is_available():
             return False
-        import atlas_gsplat  # noqa: F401
+        import atlas.model  # noqa: F401  (raises ImportError if the kernel cannot load)
         return True
     except Exception:
         return False
@@ -177,7 +175,7 @@ def run_case(case: testcases.Case, mode: str = "full", auto_init: bool = True,
     from atlas import codec, data
     from atlas.train import SimpleTrainerHSI
 
-    _ensure_kernel_on_path()
+    _prepare_cuda()
     cfg = case.full if mode == "full" else case.quick
     rank = rank_for(case, cfg)
 

@@ -106,10 +106,11 @@ def reconstruct(meta, arrays, return_abundance=False):
     splatted ``(H, W, rank)`` abundance map instead: the compressed-domain representation
     (partial decoding; the H*W*C cube is never materialized)."""
     import torch
-    from atlas_gsplat.project_gaussians_2d import project_gaussians_2d
-    from atlas_gsplat.rasterize_sum import rasterize_gaussians_sum_general
+
+    from ._kernel.project_gaussians_2d import project_gaussians_2d
+    from ._kernel.rasterize_sum import rasterize_gaussians_sum_general
     if not torch.cuda.is_available():
-        raise RuntimeError("reconstruct() needs a CUDA GPU (the atlas-gsplat kernel is CUDA-only)")
+        raise RuntimeError("reconstruct() needs a CUDA GPU (the ATLAS kernel is CUDA-only)")
 
     dev = "cuda"
     H, W, C, rank, N = meta["H"], meta["W"], meta["C"], meta["rank"], meta["N"]
