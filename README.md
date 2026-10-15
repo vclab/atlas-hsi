@@ -6,7 +6,7 @@ ATLAS (Adaptive Transfer of Low-rank Abundance Splatting) compresses hyperspectr
 It first decomposes a data cube with NMF into a small set of endmember spectra and low-rank
 abundance maps, then represents those abundance maps as a compact set of optimizable 2D
 Gaussians. Each Gaussian stores only `k` abundance coefficients (`k` is about 10-12) rather
-than the full `l` spectral bands, which is what makes Gaussian splatting tractable for HSI.
+than the full `l` spectral bands, which is what makes Gaussian splatting possible in HSI.
 The trained representation is itself the compressed file for that cube.
 
 ATLAS builds on LoR-SGS (IEEE TGRS 2025) and ports the GaussianImage++ (AAAI 2026)
@@ -183,28 +183,24 @@ needs a large-VRAM GPU (~24 GB) and the self-test skips it on smaller cards.
 
 ## Testing
 
-Two layers. The CPU-only unit suite (`tests/`, run by CI) covers the entropy codec and
-bitstream container, data utilities, the `doctor` diagnostics, `init`, and `viz` without a
-GPU. The self-test orchestrator runs the whole package end to end, one command:
+I had an LLM write all the test cases, the suite checks the codec, data loading, `atlas doctor`, the plots, and the CUDA
+kernel. The self-test trains, compresses, and decodes every dataset you have downloaded, and
+checks the PSNR and rate against recorded values. Run both from a clone of the repository:
 
 ```bash
-python tests/selftest.py            # full pipeline on every present dataset
-python tests/selftest.py --quick    # short schedule, fast sanity (seconds-minutes)
-python tests/selftest.py --list     # show cases and which datasets are present
-python tests/selftest.py --only paviau salinas
+pytest tests/ -m "not gpu"           # CPU tests only
+python tests/selftest.py --quick     # every layer, with a short training schedule
 ```
 
-It runs three stages: the CPU unit tier, a synthetic tiny-cube `train -> compress ->
-decompress` round-trip, and a dataset matrix that trains, serializes to an `.atlas`
-bitstream, decodes through the real codec, and reports reconstruction PSNR and `bpppb`. Each
-case enforces hard floors (PSNR and rate), and checks recorded golden values for drift.
-Refresh the golden values after an intended change with `--record`. Datasets whose cube is
-not in `data/raw/` are skipped, so a new dataset is exercised the moment its file is present.
-The GPU stages need a CUDA device and a toolkit to compile the kernel; they are skipped
-otherwise.
-Test cases live in `tests/testcases.py`.
+[`tests/README.md`](tests/README.md) lists the test cases and flags, and explains how to add
+a dataset.
 
 ## How it works
+
+![The ATLAS pipeline: (a) NMF initialization, (b) training and reconstruction with 2D Gaussian splatting, (c) two-stage QAT and entropy coding](assets/pipeline.png)
+
+The pipeline figure from the paper. NEW marks the techniques ATLAS adds to LoR-SGS, and
+panels (a) to (c) match the three steps below.
 
 1. Decompose. NMF factors the cube `X ≈ A·E` into abundance maps `A` and endmembers `E`
    (rank `k ≪ l`).
