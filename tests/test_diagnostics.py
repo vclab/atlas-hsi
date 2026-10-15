@@ -128,6 +128,22 @@ def test_format_report_prebuilt_demotes_mismatch_to_ready():
     assert "prebuilt" in text
 
 
+def test_format_report_prebuilt_without_toolkit_has_no_failure():
+    """The usual pip install: a prebuilt kernel and no toolkit. Nothing should read as a
+    failure, and no toolkit remedy should be suggested."""
+    report = {
+        "python": "3.12.0", "platform": "Linux-test",
+        "torch": {"installed": True, "version": "2.14.1+cu130", "built_cuda": "13.0",
+                  "cuda_available": True, "device": "RTX 3080"},
+        "nvcc": None, "toolkit_version": None, "ninja": None, "msvc": True,
+        "kernel_prebuilt": True, "match_level": "error", "match_message": "no toolkit ...",
+    }
+    text = dx.format_report(report)
+    assert "READY" in text and "NOT READY" not in text
+    assert dx._MARK["error"] not in text
+    assert "pip install torch" not in text
+
+
 def test_format_report_smoke():
     report = {
         "python": "3.11.0",

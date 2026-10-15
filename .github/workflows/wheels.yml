@@ -1,0 +1,114 @@
+name: Wheels
+
+# Builds the prebuilt CUDA kernels (CUDA 12 and 13, Linux and Windows), assembles the
+# release files, and publishes them. Tags v* publish to PyPI; a manual run can publish to
+# TestPyPI. Publishing uses PyPI trusted publishing, so no token is stored here.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the built files to"
+        type: choice
+        options: [none, testpypi]
+        default: none
+
+jobs:
+  kernel-linux:
+    name: Linux kernel, CUDA ${{ matrix.cuda }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cuda: ["12.8", "13.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space for the build image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af
+          df -h /
+      - name: Build the kernel in the manylinux_2_28 image
+        run: tools/build_kernel_linux.sh ${{ matrix.cuda }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel-linux-cuda${{ matrix.cuda }}
+          path: atlas/_kernel/_C_cu*.so
+          if-no-files-found: error
+
+  kernel-windows:
+    name: Windows kernel, CUDA ${{ matrix.cuda }}
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        include:
+          - cuda: "12.8.1"
+            torch_index: cu128
+          - cuda: "13.0.2"
+            torch_index: cu130
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.36
+        with:
+          cuda: ${{ matrix.cuda }}
+          method: network
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build the kernel against torch 2.10
+        shell: bash
+        run: |
+          python -m pip install "torch==2.10.*" --index-url https://download.pytorch.org/whl/${{ matrix.torch_index }}
+          python -m pip install ninja setuptools
+          python tools/build_kernel.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kernel-windows-cuda${{ matrix.cuda }}
+          path: atlas/_kernel/_C_cu*.pyd
+          if-no-files-found: error
+
+  wheels:
+    name: Assemble wheels and sdist
+    needs: [kernel-linux, kernel-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install build wheel
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kernel-linux-*
+          path: kernels/linux
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kernel-windows-*
+          path: kernels/windows
+          merge-multiple: true
+      - run: python tools/assemble_wheels.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: wheels
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish == 'testpypi'
+    runs-on: ubuntu-latest
+    environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'pypi' || 'testpypi' }}
+    permissions:
+      id-token: write  # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ startsWith(github.ref, 'refs/tags/v') && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}

@@ -11,7 +11,12 @@ def _require_kernel():
     """
     import torch
 
-    from ._kernel.cuda._detect import cuda_toolkit_available, find_ninja, prebuilt_kernel_path
+    from ._kernel.cuda._detect import (
+        cuda_toolkit_available,
+        find_ninja,
+        msvc_available,
+        prebuilt_kernel_path,
+    )
 
     if prebuilt_kernel_path(torch.version.cuda):
         return  # a prebuilt kernel needs neither a toolkit nor ninja
@@ -21,6 +26,8 @@ def _require_kernel():
         missing.append("a CUDA toolkit (nvcc)")
     if find_ninja() is None:
         missing.append("ninja (`pip install ninja`)")
+    if not msvc_available():
+        missing.append("the MSVC compiler (run from the x64 Native Tools Command Prompt for VS)")
     if missing:
         raise ImportError(
             "ATLAS compiles its CUDA kernel on first use, but this environment is missing "

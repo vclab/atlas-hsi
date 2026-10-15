@@ -6,7 +6,8 @@ build that importing ``_backend`` performs.
 
 Detection order, matching what the build then uses: an explicit ``CUDA_HOME`` /
 ``CUDA_PATH``, then ``nvcc`` already on ``PATH``, then a scan of standard install
-locations (``/usr/local/cuda``, ``/usr/local/cuda-*``). No hardcoded CUDA versions.
+locations (``/usr/local/cuda``, ``/usr/local/cuda-*``, and on Windows
+``C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v*``). No hardcoded CUDA versions.
 """
 import glob
 import json
@@ -17,15 +18,22 @@ from subprocess import DEVNULL, STDOUT, call, check_output
 
 _RELEASE_RE = re.compile(r"release (\d+\.\d+)")
 
+IS_WINDOWS = os.name == "nt"
+NVCC = "nvcc.exe" if IS_WINDOWS else "nvcc"
+# The suffix torch gives compiled extension libraries on this platform.
+KERNEL_EXT = ".pyd" if IS_WINDOWS else ".so"
+
 
 def _has_nvcc(cuda_home):
-    """True if ``<cuda_home>/bin/nvcc`` exists."""
-    return bool(cuda_home) and os.path.isfile(os.path.join(cuda_home, "bin", "nvcc"))
+    """True if ``<cuda_home>/bin/nvcc`` (``nvcc.exe`` on Windows) exists."""
+    return bool(cuda_home) and os.path.isfile(os.path.join(cuda_home, "bin", NVCC))
 
 
 def _version_key(path):
-    """Sort key from a ``cuda-XX.Y`` path → ``(XX, Y)``; unparseable → ``(0, 0)``."""
-    m = re.search(r"cuda-(\d+)(?:\.(\d+))?", os.path.basename(path.rstrip("/")))
+    """Sort key from a ``cuda-XX.Y`` (Linux) or ``vXX.Y`` (Windows) path → ``(XX, Y)``;
+    unparseable → ``(0, 0)``."""
+    name = os.path.basename(path.rstrip("/\\"))
+    m = re.search(r"(?:cuda-|^v)(\d+)(?:\.(\d+))?", name)
     return (int(m.group(1)), int(m.group(2) or 0)) if m else (0, 0)
 
 
@@ -33,13 +41,17 @@ def discover_cuda_home():
     """Find a CUDA toolkit in standard install locations, or return ``None``.
 
     Prefers the ``/usr/local/cuda`` symlink (the machine default), then the
-    highest-versioned ``/usr/local/cuda-XX.Y``. Returns ``None`` off Linux (the globs
-    simply match nothing).
+    highest-versioned ``/usr/local/cuda-XX.Y`` or, on Windows, the highest-versioned
+    toolkit under ``Program Files``.
     """
     if _has_nvcc("/usr/local/cuda"):
         return "/usr/local/cuda"
+    patterns = ["/usr/local/cuda-*"]
+    if IS_WINDOWS:
+        root = os.environ.get("ProgramFiles", r"C:\Program Files")
+        patterns.append(os.path.join(root, "NVIDIA GPU Computing Toolkit", "CUDA", "v*"))
     versioned = sorted(
-        (p for p in glob.glob("/usr/local/cuda-*") if _has_nvcc(p)),
+        (p for pattern in patterns for p in glob.glob(pattern) if _has_nvcc(p)),
         key=_version_key,
         reverse=True,
     )
@@ -122,7 +134,8 @@ def find_ninja():
     return shutil.which("ninja", path=ninja.BIN_DIR)
 
 
-# Prebuilt kernels ship in atlas/_kernel/ as _C_cu<CUDA major>.so (one per CUDA major).
+# Prebuilt kernels ship in atlas/_kernel/ as _C_cu<CUDA major>.so (.pyd on Windows), one
+# per CUDA major version.
 KERNEL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -133,5 +146,12 @@ def prebuilt_kernel_path(cuda_version):
     major = str(cuda_version or "").split(".")[0]
     if not major.isdigit():
         return None
-    path = os.path.join(KERNEL_DIR, f"_C_cu{major}.so")
+    path = os.path.join(KERNEL_DIR, f"_C_cu{major}{KERNEL_EXT}")
     return path if os.path.isfile(path) else None
+
+
+def msvc_available():
+    """Whether MSVC's ``cl`` is on PATH. Compiling the kernel on Windows needs it (use the
+    "x64 Native Tools Command Prompt for VS"); a prebuilt kernel does not. Always True off
+    Windows."""
+    return (not IS_WINDOWS) or shutil.which("cl") is not None

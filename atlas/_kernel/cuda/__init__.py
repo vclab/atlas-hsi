@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 
 def _make_lazy_op(name: str) -> Callable:

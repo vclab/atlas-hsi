@@ -29,6 +29,8 @@ checkpoints/
 
 # --- Prebuilt kernels (built by CI and packed into the wheel, never committed) ---
 /atlas/_kernel/_C_cu*.so
+/atlas/_kernel/_C_cu*.pyd
+/kernels/
 
 # --- Training / run outputs ---
 atlas_runs/

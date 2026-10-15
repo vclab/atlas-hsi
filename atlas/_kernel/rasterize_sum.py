@@ -1,6 +1,5 @@
 """N-channel sum rasterizer: splat Gaussian coefficients into an (H, W, C) image."""
 
-from typing import Optional
 
 import torch
 from torch import Tensor
@@ -22,8 +21,8 @@ def rasterize_gaussians_sum_general(
     img_width: int,
     BLOCK_H: int=16,
     BLOCK_W: int=16,
-    background: Optional[Tensor] = None,
-    return_alpha: Optional[bool] = False,
+    background: Tensor | None = None,
+    return_alpha: bool | None = False,
 ) -> Tensor:
     """Splat N Gaussians into an (H, W, C) image: each pixel sums every overlapping
     Gaussian's C coefficients, weighted by its kernel value and opacity. Differentiable in
@@ -98,8 +97,8 @@ class _RasterizeGaussiansSumGeneral(Function):
         img_width: int,
         BLOCK_H: int=16,
         BLOCK_W: int=16,
-        background: Optional[Tensor] = None,
-        return_alpha: Optional[bool] = False,
+        background: Tensor | None = None,
+        return_alpha: bool | None = False,
     ) -> Tensor:
         num_points = xys.size(0)
         BLOCK_X, BLOCK_Y = BLOCK_W, BLOCK_H

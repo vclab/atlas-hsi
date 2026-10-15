@@ -17,36 +17,45 @@ import sys
 from subprocess import STDOUT, check_output
 
 _RELEASE_RE = re.compile(r"release (\d+\.\d+)")
+IS_WINDOWS = os.name == "nt"
+NVCC = "nvcc.exe" if IS_WINDOWS else "nvcc"
+KERNEL_EXT = ".pyd" if IS_WINDOWS else ".so"
 _MARK = {"ok": "[ OK ]", "warn": "[WARN]", "error": "[FAIL]", "info": "[INFO]"}
 
 
 # --- CUDA toolkit detection (torch-free) ------------------------------------------
 
 def _has_nvcc(cuda_home: str | None) -> bool:
-    return bool(cuda_home) and os.path.isfile(os.path.join(cuda_home, "bin", "nvcc"))
+    return bool(cuda_home) and os.path.isfile(os.path.join(cuda_home, "bin", NVCC))
 
 
 def _version_key(path: str) -> tuple[int, int]:
-    m = re.search(r"cuda-(\d+)(?:\.(\d+))?", os.path.basename(path.rstrip("/")))
+    name = os.path.basename(path.rstrip("/\\"))
+    m = re.search(r"(?:cuda-|^v)(\d+)(?:\.(\d+))?", name)
     return (int(m.group(1)), int(m.group(2) or 0)) if m else (0, 0)
 
 
 def find_nvcc() -> str | None:
-    """Path to ``nvcc`` via CUDA_HOME/CUDA_PATH, then PATH, then ``/usr/local/cuda*``."""
+    """Path to ``nvcc`` via CUDA_HOME/CUDA_PATH, then PATH, then ``/usr/local/cuda*`` (or the
+    standard Windows install location)."""
     cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
     if _has_nvcc(cuda_home):
-        return os.path.join(cuda_home, "bin", "nvcc")
+        return os.path.join(cuda_home, "bin", NVCC)
     on_path = shutil.which("nvcc")
     if on_path:
         return on_path
     if _has_nvcc("/usr/local/cuda"):
         return "/usr/local/cuda/bin/nvcc"
+    patterns = ["/usr/local/cuda-*"]
+    if IS_WINDOWS:
+        root = os.environ.get("ProgramFiles", r"C:\Program Files")
+        patterns.append(os.path.join(root, "NVIDIA GPU Computing Toolkit", "CUDA", "v*"))
     versioned = sorted(
-        (p for p in glob.glob("/usr/local/cuda-*") if _has_nvcc(p)),
+        (p for pattern in patterns for p in glob.glob(pattern) if _has_nvcc(p)),
         key=_version_key,
         reverse=True,
     )
-    return os.path.join(versioned[0], "bin", "nvcc") if versioned else None
+    return os.path.join(versioned[0], "bin", NVCC) if versioned else None
 
 
 def _parse_release(text: str) -> str | None:
@@ -150,6 +159,12 @@ def find_ninja() -> str | None:
     return shutil.which("ninja", path=ninja.BIN_DIR)
 
 
+def find_msvc() -> str | bool | None:
+    """On Windows, the path to MSVC's ``cl``, which compiling the kernel needs, or ``None``.
+    Off Windows there is no MSVC requirement, so this returns ``True``."""
+    return shutil.which("cl") if IS_WINDOWS else True
+
+
 def kernel_prebuilt(built_cuda: str | None = None) -> bool:
     """Whether a prebuilt kernel for torch's CUDA major version ships with this install
     (``atlas/_kernel/_C_cu<major>.so``). It runs without a CUDA toolkit or ninja. Mirrors
@@ -158,7 +173,7 @@ def kernel_prebuilt(built_cuda: str | None = None) -> bool:
     if not major.isdigit():
         return False
     here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.isfile(os.path.join(here, "_kernel", f"_C_cu{major}.so"))
+    return os.path.isfile(os.path.join(here, "_kernel", f"_C_cu{major}{KERNEL_EXT}"))
 
 
 def probe_kernel_build() -> tuple[str, str]:
@@ -192,6 +207,7 @@ def collect() -> dict:
         "nvcc": nvcc,
         "toolkit_version": toolkit_version,
         "ninja": find_ninja(),
+        "msvc": find_msvc(),
         "kernel_prebuilt": kernel_prebuilt(built),
         "match_level": level,
         "match_message": message,
@@ -210,6 +226,7 @@ def overall_ok(report: dict) -> bool:
     if report.get("kernel_prebuilt", False):
         return True
     return (bool(report.get("nvcc")) and bool(report.get("ninja"))
+            and report.get("msvc", True) is not None
             and report["match_level"] != "error")
 
 
@@ -240,9 +257,13 @@ def format_report(report: dict) -> str:
     else:
         lines.append(f"{_MARK['error']} torch not importable: {t.get('error', '')}")
 
+    prebuilt = report.get("kernel_prebuilt")
     if report["nvcc"]:
         ver = report["toolkit_version"] or "unknown version"
         lines.append(f"{_MARK['ok']} CUDA toolkit {ver} at {report['nvcc']}")
+    elif prebuilt:
+        lines.append(f"{_MARK['info']} no CUDA toolkit found; none is needed with the "
+                     f"prebuilt kernel")
     else:
         lines.append(f"{_MARK['error']} no CUDA toolkit (nvcc) found on "
                      f"CUDA_HOME / PATH / /usr/local/cuda*")
@@ -254,17 +275,21 @@ def format_report(report: dict) -> str:
     else:
         lines.append(f"{_MARK['error']} ninja not found; the kernel compiles on first use "
                      f"and needs it")
+    if report.get("msvc") is None and not report.get("kernel_prebuilt"):
+        lines.append(f"{_MARK['error']} MSVC (cl.exe) not on PATH; compiling the kernel on "
+                     f"Windows needs it. Run from the \"x64 Native Tools Command Prompt for VS\".")
     hints = install_hint(report)
     if hints:
         lines.append("       Install what is missing with:")
         lines += [f"       {h}" for h in hints]
 
-    # A prebuilt kernel runs without the toolkit, so a build-time CUDA mismatch is not
-    # fatal — demote it to an informational note instead of a failure.
-    if report.get("kernel_prebuilt") and report["match_level"] != "ok":
-        lines += ["", f"{_MARK['info']} {report['match_message']}",
-                  f"{_MARK['ok']} a prebuilt kernel is installed, so the toolkit "
-                  f"above only matters if you compile from source.", ""]
+    # A prebuilt kernel runs without the toolkit, so a toolkit that does not match torch
+    # only matters when compiling from source: one note, without the remedies.
+    if prebuilt:
+        if report["nvcc"] and report["match_level"] != "ok":
+            lines += ["", f"{_MARK['info']} the toolkit does not match torch's CUDA build; "
+                          f"this only matters if you compile the kernel from source."]
+        lines.append("")
     else:
         lines += ["", f"{_MARK[report['match_level']]} {report['match_message']}", ""]
 

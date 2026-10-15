@@ -15,6 +15,7 @@ from torch.utils.cpp_extension import _get_build_directory, load
 # Detection lives in a side-effect-free module so callers (`atlas doctor`, the model's
 # import-time check) can probe without triggering the load that importing *this* does.
 from ._detect import (  # noqa: F401
+    KERNEL_EXT,
     cuda_toolkit_available,
     cuda_toolkit_version,
     find_ninja,
@@ -37,7 +38,7 @@ def _compile_and_load():
         os.environ["PATH"] = os.path.dirname(found) + os.pathsep + os.environ.get("PATH", "")
 
     build_dir = _get_build_directory(name, verbose=False)
-    library = os.path.join(build_dir, f"{name}.so")
+    library = os.path.join(build_dir, f"{name}{KERNEL_EXT}")
     # An interrupted build can leave a lock that makes the next build hang.
     try:
         os.remove(os.path.join(build_dir, "lock"))

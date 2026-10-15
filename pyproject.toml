@@ -7,20 +7,20 @@ name = "atlas-hsi"
 version = "0.1.0a1"
 description = "ATLAS (Adaptive Transfer of Low-rank Abundance Splatting): hyperspectral image compression via low-rank spectral Gaussian splatting."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT AND Apache-2.0"
 license-files = ["LICENSE", "LICENSE-APACHE"]
 authors = [{ name = "Jacob Rempel" }]
 keywords = ["hyperspectral", "compression", "gaussian-splatting", "low-rank", "remote-sensing"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Image Processing",
     "Intended Audience :: Science/Research",
     "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
 ]
 
 # Core runtime deps. The CUDA kernel ships as source in atlas/_kernel and compiles on
@@ -59,7 +59,7 @@ exclude = ["tests*"]
 # The CUDA kernel: sources (compiled on first use) and any prebuilt libraries, one per
 # CUDA major version, which load directly when they match torch's CUDA.
 "atlas._kernel.cuda" = ["csrc/*.cu", "csrc/*.cuh", "csrc/*.h"]
-"atlas._kernel" = ["_C_cu*.so"]
+"atlas._kernel" = ["_C_cu*.so", "_C_cu*.pyd"]
 
 [tool.pytest.ini_options]
 markers = [
@@ -68,7 +68,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 # Lint scope is the package surface (atlas/ + tests/ + examples/). The research
 # workspace dirs (and the old atlas-gsplat checkout) are not linted here.
 # The four atlas/ entries are faithful ports of the LoR-SGS numeric core, kept
