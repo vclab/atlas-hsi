@@ -11,15 +11,12 @@ A tiny synthetic hyperspectral cube for verifying your install and running ATLAS
 - `make_tiny_cube.py` is the deterministic generator. Rerun it to regenerate the cube with
   `python examples/make_tiny_cube.py`.
 
-No checkpoint is committed here. An ATLAS checkpoint is the compressed representation of one
-specific cube, produced by training, and training needs a CUDA GPU. Step 2 below creates it.
-
 ## Run it
 
 From the repo root, with `atlas` installed (and `atlas-gsplat` for step 2):
 
 ```bash
-# 1. NMF initialization. CPU only, about 1 s. Writes endmember and abundance .npy.
+# 1. NMF initialization. CPU only. Writes endmember and abundance .npy.
 atlas init --input examples/tiny_cube.npy --rank 4 --init-dir examples/init
 
 # 2. Train (needs a CUDA GPU). The checkpoint in atlas_runs/ is the compressed cube.
