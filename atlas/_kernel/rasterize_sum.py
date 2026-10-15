@@ -229,8 +229,8 @@ class _RasterizeGaussiansSumGeneral(Function):
                 background,
                 final_Ts,
                 final_idx,
-                v_out_img,
-                v_out_alpha,
+                v_out_img.contiguous(),
+                v_out_alpha.contiguous(),
             )
 
         return (

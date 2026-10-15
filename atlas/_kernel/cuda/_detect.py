@@ -120,3 +120,18 @@ def find_ninja():
     except ImportError:
         return None
     return shutil.which("ninja", path=ninja.BIN_DIR)
+
+
+# Prebuilt kernels ship in atlas/_kernel/ as _C_cu<CUDA major>.so (one per CUDA major).
+KERNEL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def prebuilt_kernel_path(cuda_version):
+    """Path of the prebuilt kernel matching a torch CUDA version such as ``'13.0'``, or
+    ``None`` when none ships with this install (torch-free: the caller passes
+    ``torch.version.cuda``)."""
+    major = str(cuda_version or "").split(".")[0]
+    if not major.isdigit():
+        return None
+    path = os.path.join(KERNEL_DIR, f"_C_cu{major}.so")
+    return path if os.path.isfile(path) else None

@@ -27,6 +27,9 @@ checkpoints/
 # Keep the committed quickstart fixture (overrides *.npy above).
 !examples/tiny_cube.npy
 
+# --- Prebuilt kernels (built by CI and packed into the wheel, never committed) ---
+/atlas/_kernel/_C_cu*.so
+
 # --- Training / run outputs ---
 atlas_runs/
 # Regenerated inputs for the paper's downstream evaluation (about 2 GB)

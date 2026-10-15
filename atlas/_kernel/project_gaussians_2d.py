@@ -79,8 +79,8 @@ class _ProjectGaussians2d(Function):
             num_tiles_hit,
         ) = _C.project_gaussians_2d_forward(
             num_points,
-            means2d,
-            L_elements,
+            means2d.contiguous(),
+            L_elements.contiguous(),
             img_height,
             img_width,
             tile_bounds,
@@ -113,15 +113,15 @@ class _ProjectGaussians2d(Function):
 
         (v_cov2d, v_mean2d, v_L_elements) = _C.project_gaussians_2d_backward(
             ctx.num_points,
-            means2d,
-            L_elements,
+            means2d.contiguous(),
+            L_elements.contiguous(),
             ctx.img_height,
             ctx.img_width,
-            radii,
-            conics,
-            v_xys,
-            v_depths,
-            v_conics,
+            radii.contiguous(),
+            conics.contiguous(),
+            v_xys.contiguous(),
+            v_depths.contiguous(),
+            v_conics.contiguous(),
         )
 
         # Return a gradient for each input.

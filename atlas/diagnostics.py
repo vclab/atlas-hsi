@@ -9,7 +9,6 @@ mirrors ``atlas._kernel.cuda._detect`` but stays torch-free here.
 from __future__ import annotations
 
 import glob
-import importlib.util
 import os
 import platform
 import re
@@ -151,14 +150,15 @@ def find_ninja() -> str | None:
     return shutil.which("ninja", path=ninja.BIN_DIR)
 
 
-def kernel_prebuilt() -> bool:
-    """Whether a prebuilt ``atlas._kernel.csrc`` extension is importable. A prebuilt
-    kernel runs without a CUDA toolkit or ninja (this mirrors the check in
-    ``atlas.model``)."""
-    try:
-        return importlib.util.find_spec("atlas._kernel.csrc") is not None
-    except Exception:
+def kernel_prebuilt(built_cuda: str | None = None) -> bool:
+    """Whether a prebuilt kernel for torch's CUDA major version ships with this install
+    (``atlas/_kernel/_C_cu<major>.so``). It runs without a CUDA toolkit or ninja. Mirrors
+    ``atlas._kernel.cuda._detect.prebuilt_kernel_path``, kept here torch-free."""
+    major = str(built_cuda or "").split(".")[0]
+    if not major.isdigit():
         return False
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.isfile(os.path.join(here, "_kernel", f"_C_cu{major}.so"))
 
 
 def probe_kernel_build() -> tuple[str, str]:
@@ -192,7 +192,7 @@ def collect() -> dict:
         "nvcc": nvcc,
         "toolkit_version": toolkit_version,
         "ninja": find_ninja(),
-        "kernel_prebuilt": kernel_prebuilt(),
+        "kernel_prebuilt": kernel_prebuilt(built),
         "match_level": level,
         "match_message": message,
     }

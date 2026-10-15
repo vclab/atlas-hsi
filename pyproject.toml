@@ -57,8 +57,10 @@ include = ["atlas", "atlas.*"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-# The CUDA kernel's sources, compiled on first use.
-"atlas._kernel.cuda" = ["csrc/*.cu", "csrc/*.cuh", "csrc/*.h", "csrc/*.cpp"]
+# The CUDA kernel: sources (compiled on first use) and any prebuilt libraries, one per
+# CUDA major version, which load directly when they match torch's CUDA.
+"atlas._kernel.cuda" = ["csrc/*.cu", "csrc/*.cuh", "csrc/*.h"]
+"atlas._kernel" = ["_C_cu*.so"]
 
 [tool.pytest.ini_options]
 markers = [

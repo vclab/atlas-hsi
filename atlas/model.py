@@ -9,11 +9,12 @@ def _require_kernel():
     Cheap: checks for a prebuilt kernel, a CUDA toolkit, and ninja without compiling
     anything; the first-use compile still happens lazily on the first kernel call.
     """
-    import importlib.util
+    import torch
 
-    if importlib.util.find_spec("atlas._kernel.csrc") is not None:
+    from ._kernel.cuda._detect import cuda_toolkit_available, find_ninja, prebuilt_kernel_path
+
+    if prebuilt_kernel_path(torch.version.cuda):
         return  # a prebuilt kernel needs neither a toolkit nor ninja
-    from ._kernel.cuda._detect import cuda_toolkit_available, find_ninja
 
     missing = []
     if not cuda_toolkit_available():
