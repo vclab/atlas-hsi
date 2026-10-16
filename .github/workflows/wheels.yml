@@ -18,12 +18,12 @@ on:
 jobs:
   kernel-linux:
     name: Linux kernel, CUDA ${{ matrix.cuda }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         cuda: ["12.8", "13.0"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Free disk space for the build image
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
@@ -31,7 +31,7 @@ jobs:
           df -h /
       - name: Build the kernel in the manylinux_2_28 image
         run: tools/build_kernel_linux.sh ${{ matrix.cuda }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: kernel-linux-cuda${{ matrix.cuda }}
           path: atlas/_kernel/_C_cu*.so
@@ -48,13 +48,13 @@ jobs:
           - cuda: "13.0.2"
             torch_index: cu130
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: Jimver/cuda-toolkit@v0.2.36
         with:
           cuda: ${{ matrix.cuda }}
           method: network
       - uses: ilammy/msvc-dev-cmd@v1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Build the kernel against torch 2.10
@@ -63,7 +63,7 @@ jobs:
           python -m pip install "torch==2.10.*" --index-url https://download.pytorch.org/whl/${{ matrix.torch_index }}
           python -m pip install ninja setuptools
           python tools/build_kernel.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: kernel-windows-cuda${{ matrix.cuda }}
           path: atlas/_kernel/_C_cu*.pyd
@@ -72,25 +72,25 @@ jobs:
   wheels:
     name: Assemble wheels and sdist
     needs: [kernel-linux, kernel-windows]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: python -m pip install build wheel
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: kernel-linux-*
           path: kernels/linux
           merge-multiple: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: kernel-windows-*
           path: kernels/windows
           merge-multiple: true
       - run: python tools/assemble_wheels.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
@@ -100,12 +100,12 @@ jobs:
     name: Publish
     needs: wheels
     if: startsWith(github.ref, 'refs/tags/v') || inputs.publish == 'testpypi'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: ${{ startsWith(github.ref, 'refs/tags/v') && 'pypi' || 'testpypi' }}
     permissions:
       id-token: write  # trusted publishing
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist
