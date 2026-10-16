@@ -21,43 +21,47 @@ compress, and there is no pretrained model to download.
 
 ## Installation
 
-ATLAS needs a CUDA GPU. Its CUDA kernel ships with the package as source and compiles
-automatically the first time you train or decode, which takes about a minute and needs a
-CUDA toolkit (`nvcc`). Later runs reuse the compiled kernel.
+ATLAS needs an NVIDIA GPU and PyTorch 2.10 or newer built with CUDA 12 or 13.
 
 ```bash
-# 1. PyTorch 2.10 or newer, built for your CUDA version (here, CUDA 13.0)
+# 1. PyTorch built for your CUDA version (here CUDA 13.0; use cu128 for CUDA 12.8)
 pip install torch --index-url https://download.pytorch.org/whl/cu130
 
-# 2. ATLAS (also installs ninja, which compiles the kernel)
+# 2. ATLAS
 pip install atlas-hsi
 # optional extras:
 pip install "atlas-hsi[viz]"    # matplotlib plotting helpers
 pip install "atlas-hsi[demo]"   # Streamlit demo app
-
-# or the latest development version from GitHub:
-pip install "git+https://github.com/vclab/atlas-hsi"
 ```
 
-For local development:
+On Linux (x86_64) and Windows, the package includes the CUDA kernel prebuilt for CUDA 12
+and 13, so nothing compiles and you do not need a CUDA toolkit. The prebuilt kernel runs on
+GPUs from the RTX 20 series (compute capability 7.5) onward, and with CUDA 12 also on V100
+(7.0). We tested it with PyTorch built for CUDA 12.8 and 13.0.
+
+On other platforms, or when you install from source, the kernel compiles the first time you
+train or decode (12 s on our desktop), and later runs reuse it. Compiling needs a CUDA
+toolkit (`nvcc`) with the same major version as PyTorch's CUDA, and on Windows also the MSVC
+compiler from Visual Studio Build Tools.
 
 ```bash
-pip install -e ".[viz,dev]"
+pip install "git+https://github.com/vclab/atlas-hsi"   # latest development version
+pip install -e ".[viz,dev]"                            # local development, from a clone
 ```
 
 ### Troubleshooting the install
 
-If the kernel will not compile, or training cannot find CUDA, run:
+If training cannot find CUDA, or the kernel will not load, run:
 
 ```bash
 atlas doctor
 ```
 
-It checks your torch build, the detected CUDA toolkit (`nvcc`), and `ninja`, then prints
-what is missing. torch and the toolkit should share a CUDA major version (for example
-13.x); a mismatch is reported as a warning, since the first-use compile usually still
-works. The toolkit is auto-discovered from `CUDA_HOME`, `nvcc` on `PATH`, or
-`/usr/local/cuda*`. Add `--build` to compile and load the kernel right away as a final check.
+It reports your PyTorch build and GPU, and whether a prebuilt kernel matches it. Without a
+prebuilt kernel it also checks the CUDA toolkit, `ninja`, and on Windows MSVC, and prints
+what is missing. It finds the toolkit through `CUDA_HOME`, `nvcc` on `PATH`, or the
+default install folders (`/usr/local/cuda*` on Linux). Add `--build` to load the kernel
+right away, compiling it first if needed, as a final check.
 
 ## Quickstart
 
@@ -192,12 +196,12 @@ pytest tests/ -m "not gpu"           # CPU tests only
 python tests/selftest.py --quick     # every layer, with a short training schedule
 ```
 
-[`tests/README.md`](tests/README.md) lists the test cases and flags, and explains how to add
+[`tests/README.md`](https://github.com/vclab/atlas-hsi/blob/main/tests/README.md) lists the test cases and flags, and explains how to add
 a dataset.
 
 ## How it works
 
-![The ATLAS pipeline: (a) NMF initialization, (b) training and reconstruction with 2D Gaussian splatting, (c) two-stage QAT and entropy coding](assets/pipeline.png)
+![The ATLAS pipeline: (a) NMF initialization, (b) training and reconstruction with 2D Gaussian splatting, (c) two-stage QAT and entropy coding](https://raw.githubusercontent.com/vclab/atlas-hsi/main/assets/pipeline.png)
 
 The pipeline figure from the paper. NEW marks the techniques ATLAS adds to LoR-SGS, and
 panels (a) to (c) match the three steps below.
@@ -215,7 +219,7 @@ Appendix B of the paper lists the training configuration behind each rate-distor
 target. The self-test (`python tests/selftest.py`) trains one operating point per dataset,
 including the three larger scenes of the scaling study, and checks it against recorded
 values in `tests/golden.json`. The downstream classification study (Appendix G) has its
-own folder, [`reproduce/downstream/`](reproduce/downstream/), with the scripts, the
+own folder, [`reproduce/downstream/`](https://github.com/vclab/atlas-hsi/tree/main/reproduce/downstream), with the scripts, the
 full command list, and the per-sample records behind every number in its table.
 
 ## Citation

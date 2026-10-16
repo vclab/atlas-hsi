@@ -10,8 +10,8 @@ repository-code: "https://github.com/vclab/atlas-hsi"
 license:
   - MIT
   - Apache-2.0
-version: 0.1.0
-date-released: 2026-09-03
+version: 0.1.0a2
+date-released: 2026-10-19
 preferred-citation:
   type: conference-paper
   title: "ATLAS: Hyperspectral Image Compression via Adaptive Transfer of Low-rank Abundance Splatting"
