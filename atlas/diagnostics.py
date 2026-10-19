@@ -188,6 +188,8 @@ def probe_kernel_build() -> tuple[str, str]:
         return ("error", f"the ATLAS CUDA kernel failed to build or load: {e}")
     if getattr(_backend, "_C", None) is None:
         return ("error", "the ATLAS CUDA kernel did not load (no CUDA toolkit found).")
+    if os.path.basename(_backend._C).startswith("_C_cu"):
+        return ("ok", "the prebuilt ATLAS CUDA kernel loaded.")
     return ("ok", "the ATLAS CUDA kernel compiled and loaded.")
 
 
