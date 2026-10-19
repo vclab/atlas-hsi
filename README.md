@@ -19,6 +19,21 @@ coding). On four benchmarks it beats published LoR-SGS on 6 of 8 rate-distortion
 ATLAS is a per-image representation, like an INR. You train it on the cube you want to
 compress, and there is no pretrained model to download.
 
+## How it works
+
+![The ATLAS pipeline: (a) NMF initialization, (b) training and reconstruction with 2D Gaussian splatting, (c) two-stage QAT and entropy coding](https://raw.githubusercontent.com/vclab/atlas-hsi/main/assets/pipeline.png)
+
+The pipeline figure from the paper. NEW marks the techniques ATLAS adds to LoR-SGS, and
+sections (a) to (c) match the three steps below.
+
+1. Decompose. NMF factors the cube `X ≈ A·E` into abundance maps `A` and endmembers `E`
+   (rank `k ≪ l`).
+2. Splat. Fit `N` 2D Gaussians (position, Cholesky covariance, `k` abundances) to reconstruct
+   `A`. D3 grows `N` by placing Gaussians at high-error pixels.
+3. Quantize and encode. Two-stage QAT applies LSQ+ (FP16 positions, signed Cholesky, unsigned
+   abundances), degenerate Gaussians are pruned, and parameters are entropy-coded.
+
+
 ## Installation
 
 ATLAS needs an NVIDIA GPU and PyTorch 2.10 or newer built with CUDA 12 or 13.
@@ -198,20 +213,6 @@ python tests/selftest.py --quick     # every layer, with a short training schedu
 
 [`tests/README.md`](https://github.com/vclab/atlas-hsi/blob/main/tests/README.md) lists the test cases and flags, and explains how to add
 a dataset.
-
-## How it works
-
-![The ATLAS pipeline: (a) NMF initialization, (b) training and reconstruction with 2D Gaussian splatting, (c) two-stage QAT and entropy coding](https://raw.githubusercontent.com/vclab/atlas-hsi/main/assets/pipeline.png)
-
-The pipeline figure from the paper. NEW marks the techniques ATLAS adds to LoR-SGS, and
-panels (a) to (c) match the three steps below.
-
-1. Decompose. NMF factors the cube `X ≈ A·E` into abundance maps `A` and endmembers `E`
-   (rank `k ≪ l`).
-2. Splat. Fit `N` 2D Gaussians (position, Cholesky covariance, `k` abundances) to reconstruct
-   `A`. D3 grows `N` by placing Gaussians at high-error pixels.
-3. Quantize and encode. Two-stage QAT applies LSQ+ (FP16 positions, signed Cholesky, unsigned
-   abundances), degenerate Gaussians are pruned, and parameters are entropy-coded.
 
 ## Reproducing the paper
 
